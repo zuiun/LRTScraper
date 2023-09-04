@@ -1,3 +1,4 @@
+import requests
 from urllib.request import urlopen
 
 ENGLISH = "E"
@@ -30,10 +31,13 @@ def choose_papers ():
         else:
             print ("Invalid option.")
 
-websites = choose_papers ()
+def main ():
+    websites = choose_papers ()
 
-for i in websites:
-    print (urlopen (i))
+    for i in websites:
+        print (urlopen (i))
 
-# LRT uses XHR requests
-# KW and Kurier use "[page/xx/]?s="
+    # LRT uses XHR requests
+    # KW and Kurier use "[page/xx/]?s="
+
+main ()
