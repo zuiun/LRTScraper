@@ -27,12 +27,23 @@ async function import_json (path) {
         .catch((error) => console.log ("JSON Import Error: " + error));
 }
 
+/*
+ * Downloads a page
+ *
+ * page: int = page number
+ * from: string = from date in yyyy-mm-dd format
+ * to: string = to date in yyyy-mm-dd format
+ * 
+ * Pre: None
+ * Post: None
+ * Return: JSON = JSON of page API call
+ */
 async function download_page (page, from, to) {
     // LRT
     // Open the JSON containing what pages to show
     let page = await import_json (`api/search?page=${page}&count=44&dfrom=${from}&dto=${to}&order=desc`);
 
-    page ["items"].forEach (function (i) {
+    page ["items"].forEach (async function (i) {
         // Only download news
         // if (i ["url"].contains ("naujienos")) {
             // Download page
@@ -42,6 +53,16 @@ async function download_page (page, from, to) {
     return page;
 }
 
+/*
+ * Downloads all pages in a date range
+ *
+ * from: string = from date in yyyy-mm-dd format
+ * to: string = to date in yyyy-mm-dd format
+ * 
+ * Pre: None
+ * Post: None
+ * Return: None
+ */
 async function download_all (from, to) {
     let i = 1, page = await download_page (i, from, to);
 
