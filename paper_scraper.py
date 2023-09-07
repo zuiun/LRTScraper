@@ -39,7 +39,7 @@ information: dict = information from page API call
 
 Pre: None
 Post: None
-Return: bool = Whether PDF conversion succeeded or not
+Return: bool = True if PDF conversion succeeded, else False
 '''
 def download_article (information):
     article = import_file (f"https://www.lrt.lt/{information ['url']}")
@@ -47,7 +47,7 @@ def download_article (information):
     output = open (file_name, "w+b")
     status = pisa.CreatePDF (article, output)
     output.close ()
-    return status.err
+    return not status.err
 
 '''
 Downloads a page
@@ -66,7 +66,8 @@ def download_page (page_number, query, from_date, to_date):
     page = import_json (f"https://www.lrt.lt/api/search?page={page_number}&q={query}&count=44&dfrom={from_date}&dto={to_date}&order=desc")
 
     for i in page ["items"]:
-        download_article (i)
+        if not download_article (i):
+            print (f"PDF download error for {i ['title']}")
 
     return page
 
