@@ -1,5 +1,6 @@
 import os
 import requests
+from bs4 import BeautifulSoup
 from xhtml2pdf import pisa
 
 '''
@@ -9,7 +10,7 @@ path: string = path to file
 
 Pre: None
 Post: None
-Return: response = response of file
+Return: Response = response of file
 '''
 def import_file (path):
     file = requests.get (path)
@@ -18,11 +19,12 @@ def import_file (path):
         file.raise_for_status ()
     except requests.exceptions.HTTPError:
         print (f"File import error for {path}: {requests.exceptions.HTTPError}")
+        return None
 
     return file
 
 '''
-Imports a file as a JSON
+Imports a file as JSON
 
 path: string = path to file
 
@@ -36,19 +38,38 @@ def import_json (path):
 '''
 Downloads an article as PDF
 
-url: dict = information from page API call
+path: string = path to article
+date_time: string = date and time in YYYYMMDDHHmm format
 
 Pre: None
 Post: None
 Return: bool = True if PDF conversion succeeded, else False
 '''
-def download_article (url, date):
-    article = import_file (url)
-    file_name = date + ".pdf" # File name given in specifications
-    output = open (file_name, "w+b")
-    status = pisa.CreatePDF (article, output) # True if PDF conversion failed, else False
-    output.close ()
-    return not status.err
+def download_article (path, date_time):
+    if os.path.exists (path):
+        print (f"Download error for {path}: File already exists")
+        return False
+    else:
+        article = import_file (path).text
+        output = open (f"{date_time}.pdf", "w+b") # File name given in specifications
+        article = pisa.CreatePDF (article, output) # True if PDF conversion failed, else False
+        output.close ()
+        return not article.err
+
+'''
+Downloads a page
+
+paths: list = list of article paths
+date_times: list = list of article dates and times in YYYYMMDDHHmm format
+
+Pre: None
+Post: None
+Return: None
+'''
+def download_page (paths, date_times):
+    for i in range (len (paths)):
+        if not utilities.download_article (paths [i], date_times [i]):
+            print (f"PDF download error for {paths [i]}")
 
 '''
 Sets (and creates, if necessary) new working directory within current working directory
