@@ -87,3 +87,10 @@ def set_directory (path):
 
     os.chdir (directory)
     print ("Working directory is " + directory)
+
+if __name__ == "__main__":
+    # Download tests
+    set_directory ("articles")
+    # download_article ("https://www.lrt.lt/naujienos/sportas/10/2071596/kovosime-su-latvija-lietuva-iveike-issikvepusio-donciciaus-vedama-slovenija", "lrt")
+    # download_article ("https://www.kurier.lt/v-den-polonii-v-vilnyuse-projdet-besplatnyj-koncert/", "kurier")
+    # download_article ("https://kurierwilenski.lt/2023/09/07/naukowcy-o-uzaleznieniach-i-samobojstwach-wsrod-mlodziezy/", "kw")
