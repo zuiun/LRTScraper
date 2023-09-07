@@ -26,3 +26,29 @@ async function import_json (path) {
         .then ((response) => response.json ())
         .catch((error) => console.log ("JSON Import Error: " + error));
 }
+
+async function download_page (page, from, to) {
+    // LRT
+    // Open the JSON containing what pages to show
+    let page = await import_json (`api/search?page=${page}&count=44&dfrom=${from}&dto=${to}&order=desc`);
+
+    page ["items"].forEach (function (i) {
+        // Only download news
+        // if (i ["url"].contains ("naujienos")) {
+            // Download page
+        // }
+    });
+
+    return page;
+}
+
+async function download_all (from, to) {
+    let i = 1, page = await download_page (i, from, to);
+
+    while (page ["items"].length > 0) {
+        page = await download_page (i ++, from, to);
+    }
+}
+
+// LRT
+// fetch ("api/search?page=1&count=44&dfrom=2021-01-01&dto=2021-01-31&order=desc");
