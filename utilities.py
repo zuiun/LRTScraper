@@ -1,6 +1,5 @@
 import os
 import requests
-from bs4 import BeautifulSoup
 from xhtml2pdf import pisa
 
 '''

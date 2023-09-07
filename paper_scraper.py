@@ -2,44 +2,6 @@ from bs4 import BeautifulSoup
 import utilities
 
 '''
-Downloads a Kurier page
-
-path: string = path to page
-
-Pre: None
-Post: None
-Return: None
-'''
-def download_page_kurier (path):
-    page = utilities.import_file (path)
-    page = BeautifulSoup (page.text, "html.parser")
-
-    for i in page.css.select ("div.post-item a.plain"):
-        url = i ["href"]
-
-        if not utilities.download_article (url, "bruh"):
-            print (f"PDF download error for {url}")
-
-'''
-Downloads a KW page
-
-path: string = path to page
-
-Pre: None
-Post: None
-Return: None
-'''
-def download_page_kw (path):
-    page = utilities.import_file (path)
-    page = BeautifulSoup (page.text, "html.parser")
-
-    for i in page.css.select ("div.tdb_module_loop div.td-module-meta-info h3.entry-title a"):
-        url = i ["href"]
-
-        if not utilities.download_article (url, "bruh"):
-            print (f"PDF download error for {url}")
-
-'''
 Downloads all LRT pages in a date range
 
 query: string = search query
