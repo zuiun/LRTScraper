@@ -1,7 +1,7 @@
 import os
+import pdfkit
 import requests
-from bs4 import BeautifulSoup
-from xhtml2pdf import pisa
+# from bs4 import BeautifulSoup
 
 '''
 Imports a file
@@ -37,7 +37,7 @@ def import_json (path):
     return import_file (path).json () # Don't catch exceptions, as API failure should be fatal
 
 '''
-Strips a file of unnecessary elements
+Formats a file for printing
 
 html: string = HTML of file
 
@@ -45,35 +45,38 @@ Pre: None
 Post: None
 Return: string = HTML of stripped file
 '''
-def strip_html (html):
-    file = BeautifulSoup (html, "html.parser")
-    current = file.article.contents [0]
+# def format_html (html):
+    # file = BeautifulSoup (html, "html.parser")
+    # current = file.article.contents [0]
 
     # Remove content that isn't the main article
-    for i in current.parents:
-        if i.name == "body":
-            break
+    # for i in current.parents:
+    #     if i.name == "body":
+    #         break
 
-        for j in i.find_previous_siblings ():
-            j.decompose ()
+    #     for j in i.find_previous_siblings ():
+    #         j.decompose ()
 
-        for j in i.find_next_siblings ():
-            j.decompose ()
+    #     for j in i.find_next_siblings ():
+    #         j.decompose ()
 
-    for i in file.css.select ("script"):
-        i.decompose ()
+    # for i in file.css.select ("script"):
+    #     i.decompose ()
 
-    for i in file.css.select ("style"):
-        i.decompose ()
+    # for i in file.css.select ("style"):
+    #     i.decompose ()
 
     # Remove elements specific to KW
-    for i in file.css.select ("div.td-is-sticky"):
-        i.decompose ()
+    # for i in file.css.select ("div.td-is-sticky"):
+    #     i.decompose ()
 
-    for i in file.css.select ("div.tdc-element-style"):
-        i.decompose ()
+    # for i in file.css.select ("div.tdc-element-style"):
+    #     i.decompose ()
 
-    return file.prettify ()
+    # current = file.new_tag ("style")
+    # current.string = "p { font-family: \"Times New Roman\" }"
+    # file.head.append (current)
+    # return file.prettify ()
 
 '''
 Downloads an article as PDF
@@ -89,23 +92,16 @@ def download_article (path, date_time):
     file = f"{date_time}.pdf"
 
     if os.path.exists (file):
-        print (f"Download error for {file}: File already exists")
+        print (f"File creation error for {file}: File already exists")
         return False
     else:
-        output = open (file, "w+b") # File name given in specifications
-        article = import_file (path).text
-        article = strip_html (article)
-        print (article)
-
         try:
-            pisa.CreatePDF (article, output, encoding = "UTF-8")
+            pdfkit.from_url (path, file)
         except Exception as exception:
             print (f"PDF conversion error for {path}: {exception}")
-            output.close ()
-            os.remove (file)
             return False
 
-        output.close ()
+        print (f"PDF download success for {path}")
         return True
 
 '''
@@ -120,8 +116,10 @@ Return: None
 '''
 def download_page (paths, date_times):
     for i in range (len (paths)):
-        if not utilities.download_article (paths [i], date_times [i]):
-            print (f"PDF download error for {paths [i]}")
+        download_article (paths [i], date_times [i])
+
+def download_range (query, from_date, to_date, collector, parser):
+    return None
 
 '''
 Sets (and creates, if necessary) new working directory within current working directory
@@ -144,7 +142,6 @@ def set_directory (path):
 if __name__ == "__main__":
     # Download tests
     set_directory ("articles")
-    # TODO: Fix encoding/font issues
     download_article ("https://www.lrt.lt/naujienos/sportas/10/2071596/kovosime-su-latvija-lietuva-iveike-issikvepusio-donciciaus-vedama-slovenija", "lrt")
     download_article ("https://www.kurier.lt/v-den-polonii-v-vilnyuse-projdet-besplatnyj-koncert/", "kurier")
     download_article ("https://kurierwilenski.lt/2023/09/07/naukowcy-o-uzaleznieniach-i-samobojstwach-wsrod-mlodziezy/", "kw")
