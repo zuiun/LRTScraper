@@ -1,5 +1,6 @@
 import os
 import requests
+from bs4 import BeautifulSoup, SoupStrainer
 from xhtml2pdf import pisa
 
 '''
@@ -20,6 +21,7 @@ def import_file (path):
         print (f"File import error for {path}: {requests.exceptions.HTTPError}")
         return None
 
+    file.encoding = "UTF-8"
     return file
 
 '''
@@ -34,6 +36,17 @@ Return: dict = JSON of file
 def import_json (path):
     return import_file (path).json () # Don't catch exceptions, as API failure should be fatal
 
+def strip_html (file):
+    page = SoupStrainer ("article")
+    page = BeautifulSoup (file, "html.parser", parse_only = page)
+    articles = page.css.select ("article")
+    
+    for i in range (len (articles)):
+        if i > 0:
+            articles [i].extract ()
+
+    return page.prettify ()
+
 '''
 Downloads an article as PDF
 
@@ -45,12 +58,14 @@ Post: None
 Return: bool = True if PDF conversion succeeded, else False
 '''
 def download_article (path, date_time):
-    if os.path.exists (path):
+    if os.path.exists (f"{date_time}.pdf"):
         print (f"Download error for {path}: File already exists")
         return False
     else:
         article = import_file (path).text
         output = open (f"{date_time}.pdf", "w+b") # File name given in specifications
+        article = strip_html (article)
+        print (article)
         article = pisa.CreatePDF (article, output) # True if PDF conversion failed, else False
         output.close ()
         return not article.err
@@ -91,6 +106,6 @@ def set_directory (path):
 if __name__ == "__main__":
     # Download tests
     set_directory ("articles")
-    # download_article ("https://www.lrt.lt/naujienos/sportas/10/2071596/kovosime-su-latvija-lietuva-iveike-issikvepusio-donciciaus-vedama-slovenija", "lrt")
-    # download_article ("https://www.kurier.lt/v-den-polonii-v-vilnyuse-projdet-besplatnyj-koncert/", "kurier")
-    # download_article ("https://kurierwilenski.lt/2023/09/07/naukowcy-o-uzaleznieniach-i-samobojstwach-wsrod-mlodziezy/", "kw")
+    download_article ("https://www.lrt.lt/naujienos/sportas/10/2071596/kovosime-su-latvija-lietuva-iveike-issikvepusio-donciciaus-vedama-slovenija", "lrt")
+    download_article ("https://www.kurier.lt/v-den-polonii-v-vilnyuse-projdet-besplatnyj-koncert/", "kurier")
+    download_article ("https://kurierwilenski.lt/2023/09/07/naukowcy-o-uzaleznieniach-i-samobojstwach-wsrod-mlodziezy/", "kw")
