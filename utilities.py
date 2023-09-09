@@ -36,16 +36,33 @@ Return: dict = JSON of file
 def import_json (path):
     return import_file (path).json () # Don't catch exceptions, as API failure should be fatal
 
-def strip_html (file):
-    page = SoupStrainer ("article")
-    page = BeautifulSoup (file, "html.parser", parse_only = page)
-    articles = page.css.select ("article")
-    
-    for i in range (len (articles)):
-        if i > 0:
-            articles [i].extract ()
+'''
+Strips a file of unnecessary elements
 
-    return page.prettify ()
+file: string = HTML of file
+
+Pre: None
+Post: None
+Return: string = HTML of stripped file
+'''
+def strip_file (file):
+    article = SoupStrainer ("article")
+    article = BeautifulSoup (file, "html.parser", parse_only = article)
+
+    for i in article.css.select ("script"):
+        i.extract ()
+
+    for i in article.css.select ("style"):
+        i.extract ()
+
+    # Problems with KW
+    for i in article.css.select ("div.td-is-sticky"):
+        i.extract ()
+
+    for i in article.css.select ("div.tdc-element-style"):
+        i.extract ()
+
+    return article.prettify ()
 
 '''
 Downloads an article as PDF
@@ -64,7 +81,7 @@ def download_article (path, date_time):
     else:
         article = import_file (path).text
         output = open (f"{date_time}.pdf", "w+b") # File name given in specifications
-        article = strip_html (article)
+        article = strip_file (article)
         print (article)
         article = pisa.CreatePDF (article, output) # True if PDF conversion failed, else False
         output.close ()
@@ -106,6 +123,7 @@ def set_directory (path):
 if __name__ == "__main__":
     # Download tests
     set_directory ("articles")
-    download_article ("https://www.lrt.lt/naujienos/sportas/10/2071596/kovosime-su-latvija-lietuva-iveike-issikvepusio-donciciaus-vedama-slovenija", "lrt")
-    download_article ("https://www.kurier.lt/v-den-polonii-v-vilnyuse-projdet-besplatnyj-koncert/", "kurier")
-    download_article ("https://kurierwilenski.lt/2023/09/07/naukowcy-o-uzaleznieniach-i-samobojstwach-wsrod-mlodziezy/", "kw")
+    # TODO: Fix encoding/font issues
+    # download_article ("https://www.lrt.lt/naujienos/sportas/10/2071596/kovosime-su-latvija-lietuva-iveike-issikvepusio-donciciaus-vedama-slovenija", "lrt")
+    # download_article ("https://www.kurier.lt/v-den-polonii-v-vilnyuse-projdet-besplatnyj-koncert/", "kurier")
+    # download_article ("https://kurierwilenski.lt/2023/09/07/naukowcy-o-uzaleznieniach-i-samobojstwach-wsrod-mlodziezy/", "kw")
