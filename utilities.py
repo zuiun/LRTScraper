@@ -1,6 +1,6 @@
 import os
 import requests
-from bs4 import BeautifulSoup, SoupStrainer
+from bs4 import BeautifulSoup
 from xhtml2pdf import pisa
 
 '''
@@ -17,8 +17,8 @@ def import_file (path):
 
     try:
         file.raise_for_status ()
-    except requests.exceptions.HTTPError:
-        print (f"File import error for {path}: {requests.exceptions.HTTPError}")
+    except requests.exceptions.HTTPError as exception:
+        print (f"File import error for {path}: {exception}")
         return None
 
     file.encoding = "UTF-8"
@@ -39,30 +39,41 @@ def import_json (path):
 '''
 Strips a file of unnecessary elements
 
-file: string = HTML of file
+html: string = HTML of file
 
 Pre: None
 Post: None
 Return: string = HTML of stripped file
 '''
-def strip_file (file):
-    article = SoupStrainer ("article")
-    article = BeautifulSoup (file, "html.parser", parse_only = article)
+def strip_html (html):
+    file = BeautifulSoup (html, "html.parser")
+    current = file.article.contents [0]
 
-    for i in article.css.select ("script"):
-        i.extract ()
+    # Remove content that isn't the main article
+    for i in current.parents:
+        if i.name == "body":
+            break
 
-    for i in article.css.select ("style"):
-        i.extract ()
+        for j in i.find_previous_siblings ():
+            j.decompose ()
 
-    # Problems with KW
-    for i in article.css.select ("div.td-is-sticky"):
-        i.extract ()
+        for j in i.find_next_siblings ():
+            j.decompose ()
 
-    for i in article.css.select ("div.tdc-element-style"):
-        i.extract ()
+    for i in file.css.select ("script"):
+        i.decompose ()
 
-    return article.prettify ()
+    for i in file.css.select ("style"):
+        i.decompose ()
+
+    # Remove elements specific to KW
+    for i in file.css.select ("div.td-is-sticky"):
+        i.decompose ()
+
+    for i in file.css.select ("div.tdc-element-style"):
+        i.decompose ()
+
+    return file.prettify ()
 
 '''
 Downloads an article as PDF
@@ -75,17 +86,27 @@ Post: None
 Return: bool = True if PDF conversion succeeded, else False
 '''
 def download_article (path, date_time):
-    if os.path.exists (f"{date_time}.pdf"):
-        print (f"Download error for {path}: File already exists")
+    file = f"{date_time}.pdf"
+
+    if os.path.exists (file):
+        print (f"Download error for {file}: File already exists")
         return False
     else:
+        output = open (file, "w+b") # File name given in specifications
         article = import_file (path).text
-        output = open (f"{date_time}.pdf", "w+b") # File name given in specifications
-        article = strip_file (article)
+        article = strip_html (article)
         print (article)
-        article = pisa.CreatePDF (article, output) # True if PDF conversion failed, else False
+
+        try:
+            pisa.CreatePDF (article, output, encoding = "UTF-8")
+        except Exception as exception:
+            print (f"PDF conversion error for {path}: {exception}")
+            output.close ()
+            os.remove (file)
+            return False
+
         output.close ()
-        return not article.err
+        return True
 
 '''
 Downloads a page
@@ -124,6 +145,6 @@ if __name__ == "__main__":
     # Download tests
     set_directory ("articles")
     # TODO: Fix encoding/font issues
-    # download_article ("https://www.lrt.lt/naujienos/sportas/10/2071596/kovosime-su-latvija-lietuva-iveike-issikvepusio-donciciaus-vedama-slovenija", "lrt")
-    # download_article ("https://www.kurier.lt/v-den-polonii-v-vilnyuse-projdet-besplatnyj-koncert/", "kurier")
-    # download_article ("https://kurierwilenski.lt/2023/09/07/naukowcy-o-uzaleznieniach-i-samobojstwach-wsrod-mlodziezy/", "kw")
+    download_article ("https://www.lrt.lt/naujienos/sportas/10/2071596/kovosime-su-latvija-lietuva-iveike-issikvepusio-donciciaus-vedama-slovenija", "lrt")
+    download_article ("https://www.kurier.lt/v-den-polonii-v-vilnyuse-projdet-besplatnyj-koncert/", "kurier")
+    download_article ("https://kurierwilenski.lt/2023/09/07/naukowcy-o-uzaleznieniach-i-samobojstwach-wsrod-mlodziezy/", "kw")
