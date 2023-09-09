@@ -55,8 +55,8 @@ def collector_html (args):
         return None
     else:
         file = BeautifulSoup (file.text, "html.parser")
-        links = page.css.select (args ["a_selector"])
-        dates = page.css.select (args ["time_selector"])
+        links = file.css.select (args ["a_selector"])
+        dates = file.css.select (args ["time_selector"])
         paths = []
         date_times = []
 
@@ -130,8 +130,11 @@ def download_all_kw (query, from_date, to_date):
     utilities.download_range ("kw", collector_html, args)
 
 if __name__ == "__main__":
-    utilities.set_directory ("articles")
+    utilities.set_directory (os.path.join (os.getcwd (), "articles"))
+    path = os.getcwd ()
     # Download tests
     # download_all_lrt ("Belarus", "2021-01-01", "2023-01-01") # I seem to have been blocked by LRT
-    download_all_kurier ("Belarus", "2021-01-01", "2023-01-01")
+    # utilities.set_directory (os.path.join (path, "kurier"))
+    # download_all_kurier ("Belarus", "2021-01-01", "2023-01-01")
+    utilities.set_directory (os.path.join (path, "kw"))
     download_all_kw ("Belarus", "2021-01-01", "2023-01-01")

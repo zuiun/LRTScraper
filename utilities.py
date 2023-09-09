@@ -136,7 +136,7 @@ def download_range (website, collector, args):
         args ["path"] = "https://www.lrt.lt"
         args ["category"] = "order=desc"
     elif website == "kurier":
-        args ["path"] = "https://www.lrt.lt"
+        args ["path"] = "https://www.kurier.lt"
         args ["a_selector"] = "div.post-item a.plain"
         args ["time_selector"] = "time.entry-date"
     elif website == "kw":
@@ -166,7 +166,7 @@ def download_range (website, collector, args):
         information = collector (args)
 
 '''
-Sets (and creates, if necessary) new working directory within current working directory
+Sets (and creates, if necessary) new working directory
 
 path: string = path to directory
 
@@ -175,17 +175,15 @@ Post: None
 Return: None
 '''
 def set_directory (path):
-    directory = os.path.join (os.getcwd (), path)
+    if not os.path.exists (path):
+        os.makedirs (path)
 
-    if not os.path.exists (directory):
-        os.makedirs (directory)
-
-    os.chdir (directory)
-    print ("Working directory is " + directory)
+    os.chdir (path)
+    print ("Working directory is " + path)
 
 if __name__ == "__main__":
     # Download tests
-    set_directory ("articles")
+    set_directory (os.path.join (os.getcwd (), "articles"))
     download_article ("https://www.lrt.lt/naujienos/sportas/10/2071596/kovosime-su-latvija-lietuva-iveike-issikvepusio-donciciaus-vedama-slovenija", "lrt")
     download_article ("https://www.kurier.lt/v-den-polonii-v-vilnyuse-projdet-besplatnyj-koncert/", "kurier")
     download_article ("https://kurierwilenski.lt/2023/09/07/naukowcy-o-uzaleznieniach-i-samobojstwach-wsrod-mlodziezy/", "kw")
