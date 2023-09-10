@@ -89,16 +89,16 @@ def download_article (path, date_time):
     file = f"{date_time}.pdf"
 
     if os.path.exists (file):
-        print (f"File creation error for {file}: File already exists")
+        print (f"File creation error for {path} as {file}: File already exists")
         return False
     else:
         try:
             pdfkit.from_url (path, file)
         except Exception as exception:
-            print (f"PDF conversion error for {path}: {exception}")
+            print (f"PDF conversion error for {path} as {file}: {exception}")
             return False
 
-        print (f"PDF download success for {path}")
+        print (f"PDF download success for {path} as {file}")
         return True
 
 '''
@@ -122,7 +122,7 @@ path: string = path to directory
 
 Pre: None
 Post: None
-Return: None
+Return: string = new working directory
 '''
 def set_directory (path):
     if not os.path.exists (path):
@@ -130,6 +130,7 @@ def set_directory (path):
 
     os.chdir (path)
     print ("Working directory is " + path)
+    return path
 
 if __name__ == "__main__":
     # Download tests
