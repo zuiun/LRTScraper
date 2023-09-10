@@ -54,9 +54,9 @@ def download_all_kurier (query, from_date, to_date):
     while page is not None:
         page = BeautifulSoup (page.text, "html.parser")
         links = page.css.select ("div.post-item a.plain")
-        dates = []
         paths = []
         date_times = []
+        finished = False
 
         for j in range (len (links)):
             date = utilities.import_file (links [j] ["href"])
@@ -67,9 +67,14 @@ def download_all_kurier (query, from_date, to_date):
                 paths.append (links [j] ["href"])
                 date_times.append ("".join (filter (lambda c: c not in "-T:", date [: 16])))
             elif date [: 10] < from_date:
+                finished = True
                 break
 
         utilities.download_page (paths, date_times)
+
+        if finished:
+            break
+
         i += 1
         page = utilities.import_file (f"https://www.kurier.lt/page/{i}/?s={query}")
 
@@ -94,6 +99,7 @@ def download_all_kw (query, from_date, to_date):
         dates = page.css.select ("time.entry-date")
         paths = []
         date_times = []
+        finished = False
 
         for j in range (len (dates)):
             date = dates [j] ["datetime"]
@@ -102,18 +108,23 @@ def download_all_kw (query, from_date, to_date):
                 paths.append (links [j] ["href"])
                 date_times.append ("".join (filter (lambda c: c not in "-T:", date [: 16])))
             elif date [: 10] < from_date:
+                finished = True
                 break
 
         utilities.download_page (paths, date_times)
+
+        if finished:
+            break
+
         i += 1
         page = utilities.import_file (f"https://kurierwilenski.lt/page/{i}/?s={query}")
 
 if __name__ == "__main__":
-    utilities.set_directory (os.path.join (os.getcwd (), "articles"))
-    path = os.getcwd ()
+    path = utilities.set_directory (os.path.join (os.getcwd (), "articles"))
     # Download tests
-    # download_all_lrt ("Belarus", "2021-01-01", "2023-01-01", "order=desc") # I seem to have been blocked by LRT
+    # utilities.set_directory (os.path.join (path, "lrt"))
+    # download_all_lrt ("Belarus", "2021-01-01", "2021-01-31", "order=desc") # I seem to have been blocked by LRT
     utilities.set_directory (os.path.join (path, "kurier"))
-    download_all_kurier ("Belarus", "2021-01-01", "2023-01-01")
+    download_all_kurier ("Belarus", "2022-02-01", "2022-02-31")
     utilities.set_directory (os.path.join (path, "kw"))
-    download_all_kw ("Belarus", "2021-01-01", "2023-01-01")
+    download_all_kw ("Belarus", "2022-01-01", "2022-12-31")
