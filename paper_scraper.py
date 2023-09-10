@@ -28,7 +28,7 @@ def download_all_lrt (query, from_date, to_date, category):
 
         for j in page ["items"]:
             paths.append (f"https://www.lrt.lt/{j ['url']}")
-            date_times.append (filter (lambda c: c not in ". :", j ["item_date"]))
+            date_times.append ("".join (filter (lambda c: c not in ". :", j ["item_date"])))
 
         utilities.download_page (paths, date_times)
         i += 1
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     path = utilities.set_directory (os.path.join (os.getcwd (), "articles"))
     # Download tests
     utilities.set_directory (os.path.join (path, "lrt"))
-    download_all_lrt ("Belarus", "2021-01-01", "2023-01-01", "order=desc") # I seem to have been blocked by LRT
+    download_all_lrt ("Belarus", "2021-01-01", "2021-01-31", "order=desc") # I seem to have been blocked by LRT
     # utilities.set_directory (os.path.join (path, "kurier"))
     # download_all_kurier ("Belarus", "2021-01-01", "2023-01-01")
     # utilities.set_directory (os.path.join (path, "kw"))
