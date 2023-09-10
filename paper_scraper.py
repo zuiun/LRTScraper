@@ -125,6 +125,6 @@ if __name__ == "__main__":
     utilities.set_directory (os.path.join (path, "lrt"))
     download_all_lrt ("Belarus", "2021-01-01", "2021-01-31", "order=desc") # I seem to have been blocked by LRT
     # utilities.set_directory (os.path.join (path, "kurier"))
-    # download_all_kurier ("Belarus", "2021-01-01", "2023-01-01")
+    # download_all_kurier ("Belarus", "2022-02-01", "2022-02-31")
     # utilities.set_directory (os.path.join (path, "kw"))
-    # download_all_kw ("Belarus", "2021-01-01", "2023-01-01")
+    # download_all_kw ("Belarus", "2022-01-01", "2022-12-31")
