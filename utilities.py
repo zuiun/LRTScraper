@@ -116,56 +116,6 @@ def download_page (paths, date_times):
         download_article (paths [i], date_times [i])
 
 '''
-Downloads all pages in a date range
-
-website: string = website
-collector: function = data collector for website, must return (paths, date_times) for download_page
-args: dict = arguments for collector
-    query: string = search query
-    from_date: string = from date in YYYY-MM-DD format
-    to_date: string = to date in YYYY-MM-DD format
-
-Pre: None
-Post: Changes current working directory
-Return: None
-'''
-def download_range (website, collector, args):
-    i = 1
-
-    if website == "lrt":
-        args ["path"] = "https://www.lrt.lt"
-        args ["category"] = "order=desc"
-    elif website == "kurier":
-        args ["path"] = "https://www.kurier.lt"
-        args ["a_selector"] = "div.post-item a.plain"
-        args ["time_selector"] = "time.entry-date"
-    elif website == "kw":
-        args ["path"] = "https://kurierwilenski.lt"
-        args ["a_selector"] = "div.tdb_module_loop h3.entry-title a"
-        args ["time_selector"] = "time.entry-date"
-    elif website == "lrt-en":
-        args ["path"] = "https://www.lrt.lt"
-        args ["category"] = "category_id=19"
-    elif website == "lrt-ru":
-        args ["path"] = "https://www.lrt.lt"
-        args ["category"] = "category_id=17"
-    elif website == "lrt-pl":
-        args ["path"] = "https://www.lrt.lt"
-        args ["category"] = "category_id=1261"
-    else:
-        print ("Invalid website")
-        return
-
-    args ["page_number"] = i
-    information = collector (args)
-
-    while information is not None:
-        download_page (information [0], information [1])
-        i += 1
-        args ["page_number"] = i
-        information = collector (args)
-
-'''
 Sets (and creates, if necessary) new working directory
 
 path: string = path to directory
