@@ -121,9 +121,9 @@ def download_all_kw (query, from_date, to_date):
         page = utilities.import_file (f"https://kurierwilenski.lt/page/{i}/?s={query}")
 
 if __name__ == "__main__":
-    paper = input ("Choose a paper (ltr = LTR [LT], le = LTR [EN], lr = LTR [RU], lp = LTR [PL], ku = Kurier, kw = Kurier Wileński): ")
+    paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], ku = Kurier, kw = Kurier Wileński): ")
 
-    while paper != "ltr" and paper != "le" and paper != "lr" and paper != "lp" and paper != "ku" and paper != "kw":
+    while paper != "lrt" and paper != "le" and paper != "lr" and paper != "lp" and paper != "ku" and paper != "kw":
         paper = input ("Invalid choice. Choose a paper: ")
 
     query = input ("Enter your query: ")
@@ -147,17 +147,17 @@ if __name__ == "__main__":
         else:
             break
 
-    if paper == "ltr":
-        utilities.set_directory (os.path.join (os.getcwd (), "articles", "ltr", "lt"))
+    if paper == "lrt":
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "lt"))
         download_all_lrt (query, from_date, to_date, "order=desc")
     elif paper == "le":
-        utilities.set_directory (os.path.join (os.getcwd (), "articles", "ltr", "en"))
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "en"))
         download_all_lrt (query, from_date, to_date, "category_id=19")
     elif paper == "lr":
-        utilities.set_directory (os.path.join (os.getcwd (), "articles", "ltr", "ru"))
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "ru"))
         download_all_lrt (query, from_date, to_date, "category_id=17")
     elif paper == "lp":
-        utilities.set_directory (os.path.join (os.getcwd (), "articles", "ltr", "pl"))
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "pl"))
         download_all_lrt (query, from_date, to_date, "category_id=1261")
     elif paper == "ku":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "kurier"))
