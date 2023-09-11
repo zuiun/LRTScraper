@@ -1,3 +1,4 @@
+import datetime
 import os
 import utilities
 from bs4 import BeautifulSoup
@@ -120,11 +121,48 @@ def download_all_kw (query, from_date, to_date):
         page = utilities.import_file (f"https://kurierwilenski.lt/page/{i}/?s={query}")
 
 if __name__ == "__main__":
-    path = utilities.set_directory (os.path.join (os.getcwd (), "articles"))
-    # Download tests
-    utilities.set_directory (os.path.join (path, "lrt"))
-    download_all_lrt ("Belarus", "2021-01-01", "2021-01-31", "order=desc") # I seem to have been blocked by LRT
-    # utilities.set_directory (os.path.join (path, "kurier"))
-    # download_all_kurier ("Belarus", "2022-02-01", "2022-02-31")
-    # utilities.set_directory (os.path.join (path, "kw"))
-    # download_all_kw ("Belarus", "2022-01-01", "2022-12-31")
+    paper = input ("Choose a paper (ltr = LTR [LT], le = LTR [EN], lr = LTR [RU], lp = LTR [PL], ku = Kurier, kw = Kurier Wileński): ")
+
+    while paper != "ltr" and paper != "le" and paper != "lr" and paper != "lp" and paper != "ku" and paper != "kw":
+        paper = input ("Invalid choice. Choose a paper: ")
+
+    query = input ("Enter your query: ")
+    from_date = input ("Enter a from date (YYYY-MM-DD): ")
+
+    while True:
+        try:
+            datetime.date.fromisoformat (from_date)
+        except ValueError as exception:
+            from_date = input ("Invalid date. Enter a from date: ")
+        else:
+            break
+
+    to_date = input ("Enter a to date (YYYY-MM-DD): ")
+
+    while True:
+        try:
+            datetime.date.fromisoformat (to_date)
+        except ValueError as exception:
+            to_date = input ("Invalid date. Enter a to date: ")
+        else:
+            break
+
+    if paper == "ltr":
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "ltr", "lt"))
+        download_all_lrt (query, from_date, to_date, "order=desc")
+    elif paper == "le":
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "ltr", "en"))
+        download_all_lrt (query, from_date, to_date, "category_id=19")
+    elif paper == "lr":
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "ltr", "ru"))
+        download_all_lrt (query, from_date, to_date, "category_id=17")
+    elif paper == "lp":
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "ltr", "pl"))
+        download_all_lrt (query, from_date, to_date, "category_id=1261")
+    elif paper == "ku":
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "kurier"))
+        print ("Kurier downloads are extremely slow.")
+        download_all_kurier (query, from_date, to_date)
+    elif paper == "kw":
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "kw"))
+        download_all_kw (query, from_date, to_date)
