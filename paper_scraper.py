@@ -48,7 +48,6 @@ Post: Changes current working directory
 Return: None
 '''
 def download_all_kurier (query, from_date, to_date):
-    # "https://www.kurier.lt/?s&doing_wp_cron=1694110472.8329210281372070312500#" with no query, not sure what this means
     i = 1
     page = utilities.import_file (f"https://www.kurier.lt/?s={query}")
 
@@ -120,13 +119,14 @@ def download_all_kw (query, from_date, to_date):
         i += 1
         page = utilities.import_file (f"https://kurierwilenski.lt/page/{i}/?s={query}")
 
+# TODO: Google Translate Lithuanian
 if __name__ == "__main__":
     paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], ku = Kurier, kw = Kurier Wileński): ")
 
     while paper != "lrt" and paper != "le" and paper != "lr" and paper != "lp" and paper != "ku" and paper != "kw":
         paper = input ("Invalid choice. Choose a paper: ")
 
-    query = input ("Enter your query: ")
+    query = input ("Enter your query (blank queries are accepted): ")
     from_date = input ("Enter a from date (YYYY-MM-DD): ")
 
     while True:

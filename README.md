@@ -4,7 +4,7 @@ Web scraper that can scrape LRT, Kurier, and Kurier Wileński.
 
 ## Installation
 
-Paper Scraper uses [Python 3](https://www.python.org/) and requires three packages and one external install.
+Paper Scraper uses [Python 3](https://www.python.org/) and requires three packages and one external program.
 ```
 python -m pip install beautifulsoup4
 python -m pip install pdfkit
