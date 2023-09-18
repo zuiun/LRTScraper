@@ -91,7 +91,6 @@ def download_article (path, date_time, translator, language):
 
     if os.path.exists (file):
         print (f"File creation error for {file}: File already exists")
-        return False
     else:
         try:
             pdfkit.from_url (path, file)
@@ -104,24 +103,28 @@ def download_article (path, date_time, translator, language):
     if translator:
         file = f"en_{file}"
         print (f"Attempting article translation for {path} as {file}")
-        article = import_file (path)
-        article = BeautifulSoup (article.text, "html.parser")
-        article = format_html (article)
 
-        try:
-            article = translator.translate_html (article, destination_language = "eng", source_language = language)
-        except Exception as exception:
-            print (f"Article translation error for {file}: {exception}")
-            return False
+        if os.path.exists (file):
+            print (f"File creation error for {file}: File already exists")
+        else:
+            article = import_file (path)
+            article = BeautifulSoup (article.text, "html.parser")
+            article = format_html (article)
 
-        try:
-            pdfkit.from_string (article, file, options = {"enable-local-file-access": ""})
-        except Exception as exception:
-            print (f"PDF conversion error for {file}: {exception}")
-            return False
+            try:
+                article = translator.translate_html (article, destination_language = "eng", source_language = language)
+            except Exception as exception:
+                print (f"Article translation error for {file}: {exception}")
+                return False
 
-        print (f"Article translation success for {file}")
-        return True
+            try:
+                pdfkit.from_string (article, file, options = {"enable-local-file-access": ""})
+            except Exception as exception:
+                print (f"PDF conversion error for {file}: {exception}")
+                return False
+
+            print (f"Article translation success for {file}")
+            return True
 
     return True
 
