@@ -2,6 +2,8 @@ import datetime
 import os
 import utilities
 from bs4 import BeautifulSoup
+from translatepy import Translate
+from translatepy.translators import GoogleTranslate
 
 '''
 Downloads all LRT pages in a date range
@@ -9,17 +11,25 @@ Downloads all LRT pages in a date range
 query: string = search query
 from_date: string = from date in YYYY-MM-DD format
 to_date: string = to date in YYYY-MM-DD format
-category: string = search category
-    LT = "order=desc"
-    EN = "category_id=19"
-    RU = "category_id=17"
-    PL = "category_id=1261"
+language: string = article language
+translator: Translator = article translator
 
 Pre: None
 Post: Changes current working directory
 Return: None
 '''
-def download_all_lrt (query, from_date, to_date, category):
+def download_all_lrt (query, from_date, to_date, language, translator = None):
+    category = None
+
+    if language == "lit":
+        category = "order=desc"
+    elif language == "eng":
+        category = "category_id=19"
+    elif language == "rus":
+        category = "category_id=17"
+    elif language == "pol":
+        category = "category_id=1261"
+
     i = 1
     page = utilities.import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date}&dto={to_date}&{category}")
 
@@ -31,7 +41,7 @@ def download_all_lrt (query, from_date, to_date, category):
             paths.append (f"https://www.lrt.lt/{j ['url']}")
             date_times.append ("".join (filter (lambda c: c not in ". :", j ["item_date"])))
 
-        utilities.download_page (paths, date_times)
+        utilities.download_page (paths, date_times, translator, language)
         i += 1
         page = utilities.import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date}&dto={to_date}&{category}")
 
@@ -42,12 +52,13 @@ Runs abominably slowly due to connection times
 query: string = search query
 from_date: string = from date in YYYY-MM-DD format
 to_date: string = to date in YYYY-MM-DD format
+translator: Translator = article translator
 
 Pre: None
 Post: Changes current working directory
 Return: None
 '''
-def download_all_kurier (query, from_date, to_date):
+def download_all_kurier (query, from_date, to_date, translator):
     i = 1
     page = utilities.import_file (f"https://www.kurier.lt/?s={query}")
 
@@ -70,7 +81,7 @@ def download_all_kurier (query, from_date, to_date):
                 finished = True
                 break
 
-        utilities.download_page (paths, date_times)
+        utilities.download_page (paths, date_times, translator)
 
         if finished:
             break
@@ -84,12 +95,13 @@ Downloads all KW pages in a date range
 query: string = search query
 from_date: string = from date in YYYY-MM-DD format
 to_date: string = to date in YYYY-MM-DD format
+translator: Translator = article translator
 
 Pre: None
 Post: Changes current working directory
 Return: None
 '''
-def download_all_kw (query, from_date, to_date):
+def download_all_kw (query, from_date, to_date, translator):
     i = 1
     page = utilities.import_file (f"https://kurierwilenski.lt/?s={query}")
 
@@ -111,7 +123,7 @@ def download_all_kw (query, from_date, to_date):
                 finished = True
                 break
 
-        utilities.download_page (paths, date_times)
+        utilities.download_page (paths, date_times, translator, "pol")
 
         if finished:
             break
@@ -147,22 +159,24 @@ if __name__ == "__main__":
         else:
             break
 
+    translator = Translate ([GoogleTranslate])
+
     if paper == "lrt":
-        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "lt"))
-        download_all_lrt (query, from_date, to_date, "order=desc")
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "lit"))
+        download_all_lrt (query, from_date, to_date, "lit", translator)
     elif paper == "le":
-        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "en"))
-        download_all_lrt (query, from_date, to_date, "category_id=19")
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "eng"))
+        download_all_lrt (query, from_date, to_date, "eng")
     elif paper == "lr":
-        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "ru"))
-        download_all_lrt (query, from_date, to_date, "category_id=17")
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "rus"))
+        download_all_lrt (query, from_date, to_date, "rus", translator)
     elif paper == "lp":
-        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "pl"))
-        download_all_lrt (query, from_date, to_date, "category_id=1261")
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "pol"))
+        download_all_lrt (query, from_date, to_date, "pol", translator)
     elif paper == "ku":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "kurier"))
         print ("Kurier downloads are extremely slow.")
-        download_all_kurier (query, from_date, to_date)
+        download_all_kurier (query, from_date, to_date, translator)
     elif paper == "kw":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "kw"))
-        download_all_kw (query, from_date, to_date)
+        download_all_kw (query, from_date, to_date, translator)
