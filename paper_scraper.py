@@ -1,5 +1,6 @@
 import datetime
 import os
+# import argparse
 import utilities
 from bs4 import BeautifulSoup
 from translatepy import Translate
@@ -38,8 +39,9 @@ def download_all_lrt (query, from_date, to_date, language, translator = None):
         date_times = []
 
         for j in page ["items"]:
-            paths.append (f"https://www.lrt.lt/{j ['url']}")
-            date_times.append ("".join (filter (lambda c: c not in ". :", j ["item_date"])))
+            if j ["is_video"] == 0 and j ["is_audio"] == 0:
+                paths.append (f"https://www.lrt.lt/{j ['url']}")
+                date_times.append ("".join (filter (lambda c: c not in ". :", j ["item_date"])))
 
         utilities.download_page (paths, date_times, translator, language)
         i += 1
@@ -131,7 +133,6 @@ def download_all_kw (query, from_date, to_date, translator):
         i += 1
         page = utilities.import_file (f"https://kurierwilenski.lt/page/{i}/?s={query}")
 
-# TODO: Google Translate Lithuanian
 if __name__ == "__main__":
     paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], ku = Kurier, kw = Kurier Wileński): ")
 
