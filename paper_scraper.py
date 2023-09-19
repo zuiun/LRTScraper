@@ -1,6 +1,6 @@
+# import argparse
 import datetime
 import os
-# import argparse
 import utilities
 from bs4 import BeautifulSoup
 from translatepy import Translate
@@ -158,13 +158,16 @@ if __name__ == "__main__":
         except ValueError as exception:
             to_date = input ("Invalid date. Enter a to date: ")
         else:
-            break
+            if from_date > to_date:
+                to_date = input ("Invalid date. Enter a to date: ")
+            else:
+                break
 
     translator = Translate ([GoogleTranslate])
 
     if paper == "lrt":
         # utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "lit"))
-        utilities.set_directory (os.path.join (os.getcwd (), "Baltarusija", "2020", "03"))
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "Baltarusija", "2020", "10"))
         download_all_lrt (query, from_date, to_date, "lit", translator)
     elif paper == "le":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "eng"))
