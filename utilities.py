@@ -14,7 +14,11 @@ Post: None
 Return: Response = response of file
 '''
 def import_file (path):
-    file = requests.get (path)
+    try:
+        file = requests.get (path, timeout = (10, 10))
+    except requests.exceptions.Timeout as exception:
+        print (f"File timeout error for {path}: {exception}")
+        return None
 
     try:
         file.raise_for_status ()
@@ -76,7 +80,7 @@ def format_html (file):
     return file.prettify ()
 
 '''
-Downloads an article as PDF
+Downloads and translates an article as PDFs
 
 path: string = path to article
 date_time: string = date and time in YYYYMMDDHHmm format
@@ -129,7 +133,7 @@ def download_article (path, date_time, translator, language):
     return True
 
 '''
-Downloads a page
+Downloads and translates a page
 
 paths: list = list of article paths
 date_times: list = list of article dates and times in YYYYMMDDHHmm format

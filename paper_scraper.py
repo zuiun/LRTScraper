@@ -40,7 +40,7 @@ def download_all_lrt (query, from_date, to_date, language, translator = None):
 
         for j in page ["items"]:
             if j ["is_video"] == 0 and j ["is_audio"] == 0:
-                paths.append (f"https://www.lrt.lt/{j ['url']}")
+                paths.append (f"https://www.lrt.lt{j ['url']}")
                 date_times.append ("".join (filter (lambda c: c not in ". :", j ["item_date"])))
 
         utilities.download_page (paths, date_times, translator, language)
@@ -166,8 +166,7 @@ if __name__ == "__main__":
     translator = Translate ([GoogleTranslate])
 
     if paper == "lrt":
-        # utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "lit"))
-        utilities.set_directory (os.path.join (os.getcwd (), "articles", "Baltarusija", "2020", "10"))
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "lit"))
         download_all_lrt (query, from_date, to_date, "lit", translator)
     elif paper == "le":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "eng"))
