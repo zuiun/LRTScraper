@@ -2,7 +2,7 @@ import os
 import pdfkit
 import requests
 from bs4 import BeautifulSoup
-from translatepy import Translate
+from datetime import datetime
 
 '''
 Imports a file
@@ -91,7 +91,7 @@ Return: bool = True if PDF conversion succeeded, else False
 '''
 def download_article (path, date_time, translator, language):
     file = f"{date_time}.pdf"
-    print (f"Attempting article download for {path} as {file}")
+    print (f"{datetime.now ().strftime ('%H:%M:%S')}: Attempting article download for {path} as {file}")
 
     if os.path.exists (file):
         print (f"File creation error for {file}: File already exists")
@@ -103,10 +103,10 @@ def download_article (path, date_time, translator, language):
             return False
 
         print (f"Article download success for {file}")
-    
+
     if translator:
         file = f"en_{file}"
-        print (f"Attempting article translation for {path} as {file}")
+        print (f"{datetime.now ().strftime ('%H:%M:%S')}: Attempting article translation for {path} as {file}")
 
         if os.path.exists (file):
             print (f"File creation error for {file}: File already exists")
