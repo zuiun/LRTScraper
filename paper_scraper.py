@@ -150,9 +150,13 @@ if __name__ == "__main__":
         else:
             break
 
-    to_date = input ("Enter a to date (YYYY-MM-DD): ")
+    to_date = input ("Enter a to date (YYYY-MM-DD, blank entry means today): ")
 
     while True:
+        if not to_date.strip ():
+            to_date = datetime.datetime.now ().isoformat () [: 10]
+            print (f"Today is {to_date}")
+
         try:
             datetime.date.fromisoformat (to_date)
         except ValueError as exception:
