@@ -30,6 +30,8 @@ def download_all_lrt (query, from_date, to_date, language, translator = None):
         category = "category_id=17"
     elif language == "pol":
         category = "category_id=1261"
+    elif language == "ukr":
+        category = "category_id=1263"
 
     i = 1
     page = utilities.import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date}&dto={to_date}&{category}")
@@ -134,9 +136,9 @@ def download_all_kw (query, from_date, to_date, translator):
         page = utilities.import_file (f"https://kurierwilenski.lt/page/{i}/?s={query}")
 
 if __name__ == "__main__":
-    paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], ku = Kurier, kw = Kurier Wileński): ")
+    paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], lu = LRT [UA], ku = Kurier, kw = Kurier Wileński): ")
 
-    while paper != "lrt" and paper != "le" and paper != "lr" and paper != "lp" and paper != "ku" and paper != "kw":
+    while paper != "lrt" and paper != "le" and paper != "lr" and paper != "lp" and paper != "lu" and paper != "ku" and paper != "kw":
         paper = input ("Invalid choice. Choose a paper: ")
 
     query = input ("Enter your query (blank queries are accepted): ")
@@ -181,6 +183,9 @@ if __name__ == "__main__":
     elif paper == "lp":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "pol"))
         download_all_lrt (query, from_date, to_date, "pol", translator)
+    elif paper == "lu":
+        utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "ukr"))
+        download_all_lrt (query, from_date, to_date, "ukr", translator)
     elif paper == "ku":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "kurier"))
         print ("Kurier downloads are extremely slow.")
