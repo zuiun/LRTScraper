@@ -1,6 +1,6 @@
 # Paper Scraper
 
-Web scraper that can scrape LRT, Kurier, and Kurier Wileński.
+Web scraper that can scrape LRT and Kurier Wileński.
 
 ## Installation
 
@@ -17,4 +17,3 @@ wkhtmltopdf must be added to the system path, which is explained [here](https://
 ## Usage
 
 Run `paper_scraper.py` and follow the directions.
-Note that scraping Kurier is prohibitively slow, for reasons partially beyond my control (bad server, presumably).
