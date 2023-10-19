@@ -4,8 +4,9 @@ import datetime
 import math
 import multiprocessing
 import os
+# import time
 import utilities
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 from concurrent import futures
 from translatepy import Translate
 from translatepy.translators import GoogleTranslate
@@ -40,7 +41,6 @@ def download_all_lrt (query: str, from_date: str, to_date: str, language: str, t
     i = 1
     page = utilities.import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date}&dto={to_date}&{category}")
     pages = []
-    pools = multiprocessing.cpu_count ()
 
     while len (page ["items"]) > 0:
         information = []
@@ -68,10 +68,16 @@ def download_all_lrt (query: str, from_date: str, to_date: str, language: str, t
             if len (information) > 0:
                 pages.append (information)
 
-            if len (pages) == pools:
-                # with futures.ThreadPoolExecutor (max_workers = pools) as pool:
-                with multiprocessing.Pool (processes = pools) as pool:
-                    pool.map (utilities.download_page, pages)
+            if len (pages) == utilities.THREADS:
+                with futures.ThreadPoolExecutor (max_workers = utilities.THREADS) as pool:
+                    articles, translations = zip (* pool.map (utilities.download_page, pages))
+
+                for i in range (len (pages)):
+                    with multiprocessing.Pool (processes = utilities.PROCESSES) as pool:
+                        pool.map (utilities.download_article, articles [i])
+                        pool.map (utilities.download_translation, translations [i])
+                        # time.sleep (utilities.TIMEOUT)
+                        # pool.terminate ()
 
                 pages.clear ()
         else:
@@ -126,16 +132,16 @@ def download_all_kw (query: str, from_date: str, to_date: str, translator: Trans
 
 if __name__ == "__main__":
     colorama.init ()
-    paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], lu = LRT [UA], kw = Kurier Wileński): ")
-    # paper = "lrt"
+    # paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], lu = LRT [UA], kw = Kurier Wileński): ")
+    paper = "lrt"
 
     while paper != "lrt" and paper != "le" and paper != "lr" and paper != "lp" and paper != "lu" and paper != "kw":
         paper = input ("Invalid choice. Choose a paper: ")
 
-    query = input ("Enter your query (blank queries are accepted): ")
-    from_date = input ("Enter a from date (YYYY-MM-DD): ")
-    # query = ""
-    # from_date = "2020-01-01"
+    # query = input ("Enter your query (blank queries are accepted): ")
+    # from_date = input ("Enter a from date (YYYY-MM-DD): ")
+    query = ""
+    from_date = "2020-07-01"
 
     while True:
         try:
@@ -145,8 +151,8 @@ if __name__ == "__main__":
         else:
             break
 
-    to_date = input ("Enter a to date (YYYY-MM-DD, blank entry means today): ")
-    # to_date = "2020-06-12"
+    # to_date = input ("Enter a to date (YYYY-MM-DD, blank entry means today): ")
+    to_date = "2020-10-29"
 
     while True:
         if not to_date.strip ():

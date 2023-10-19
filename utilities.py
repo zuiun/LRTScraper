@@ -1,12 +1,17 @@
+import multiprocessing
 import os
 import pdfkit
 import requests
 from bs4 import BeautifulSoup
 from collections.abc import Callable
 from colorama import Fore, Style
-from concurrent import futures
 from datetime import datetime
 from enum import auto, IntFlag
+
+MAX_PROCESSES = multiprocessing.cpu_count ()
+PROCESSES = 4
+THREADS = int (MAX_PROCESSES / PROCESSES)
+TIMEOUT = 300
 
 class Download (IntFlag):
     ARTICLE = auto ()
@@ -216,9 +221,9 @@ information: list of tuples = article information (path, names (original, conver
 
 Pre: None
 Post: None
-Return: None
+Return: tuple of lists = article data (articles (article, path, name), translations (article, path, name, translator, language))
 '''
-def download_page (information: list):
+def download_page (information: list) -> tuple:
     articles = []
     translations = []
     time_print (f"Downloading page {information [0] [4]}")
@@ -226,28 +231,17 @@ def download_page (information: list):
     for i in information:
         path, names, translator, language, _, download = i
         original, converted = names
+        article = import_file (path)
+        article = BeautifulSoup (article.text, "html.parser")
+        article = format_html (article)
 
-        if not os.path.exists (original) and not os.path.exists (converted):
-            article = import_file (path)
-            article = BeautifulSoup (article.text, "html.parser")
-            article = format_html (article)
+        if Download.ARTICLE in download:
+            articles.append ((article, path, original))
 
-            if Download.ARTICLE in download:
-                articles.append ((article, path, original))
+        if Download.TRANSLATION in download:
+            translations.append ((article, path, converted, translator, language))
 
-            if Download.TRANSLATION in download:
-                translations.append ((article, path, converted, translator, language))
-
-    with futures.ThreadPoolExecutor (max_workers = 44) as pool:
-        try:
-            list (pool.map (download_article, articles, timeout = 30))
-        except futures.TimeoutError:
-            time_print (f"{Fore.RED}Timout on article download")
-
-        try:
-            list (pool.map (download_translation, translations, timeout = 30))
-        except futures.TimeoutError:
-            time_print (f"{Fore.RED}Timout on article translation")
+    return (articles, translations)
 
 '''
 Sets (and creates, if necessary) new working directory
