@@ -2,9 +2,15 @@ import os
 import pdfkit
 import requests
 from bs4 import BeautifulSoup
+from collections.abc import Callable
 from colorama import Fore, Style
 from concurrent import futures
 from datetime import datetime
+from enum import auto, IntFlag
+
+class Download (IntFlag):
+    ARTICLE = auto ()
+    TRANSLATION = auto ()
 
 # class Page:
 #     def __init__ (self, information, number, language = "auto", translator = None):
@@ -23,42 +29,25 @@ from datetime import datetime
 '''
 Prints text with timestamp
 
-text: string = text to print
+text: str = text to print
 
 Pre: None
 Post: None
 Return: None
 '''
-def time_print (text):
+def time_print (text: str):
     print (f"{Fore.YELLOW}{datetime.now ().strftime ('%H:%M:%S')}{Style.RESET_ALL}: {text}{Style.RESET_ALL}", flush = True)
-
-'''
-Converts file name to translated name
-
-name: string = File name to translate
-
-Pre: None
-Post: None
-Return: string = Converted file name
-'''
-def convert_name (name):
-    return f"en_{name}"
-
-'''
-
-'''
-
 
 '''
 Imports a file
 
-path: string = path to file
+path: str = path to file
 
 Pre: None
 Post: None
 Return: Response = response of file
 '''
-def import_file (path):
+def import_file (path: str) -> requests.Response:
     try:
         file = requests.get (path, timeout = 10)
     except requests.exceptions.Timeout as exception:
@@ -80,25 +69,25 @@ def import_file (path):
 '''
 Imports a file as JSON
 
-path: string = path to file
+path: str = path to file
 
 Pre: None
 Post: None
 Return: dict = JSON of file
 '''
-def import_json (path):
+def import_json (path: str) -> dict:
     return import_file (path).json () # Don't catch exceptions, as API failure should be fatal
 
 '''
 Formats a file for printing
 
-file: BeautifulSoup = HTML of file
+file: BeautifulSoup = file to print
 
 Pre: None
 Post: None
-Return: string = HTML of stripped file
+Return: str = HTML of stripped file
 '''
-def format_html (file):
+def format_html (file: BeautifulSoup) -> str:
     current = file.article.contents [0]
 
     # Remove content that isn't the main article
@@ -128,93 +117,128 @@ def format_html (file):
     return file.prettify ()
 
 '''
-Downloads and translates an article as PDFs
+Converts an HTML string to PDF
 
-information: tuple = page information (paths, date_times, translator, language)
+file: str = file to convert
+name: str = name of file
+decorator: function = decorator for file
+arguemnts: tuple = arguments for decorator
 
 Pre: None
 Post: None
 Return: bool = True if PDF conversion succeeded, else False
 '''
-def download_article (information):
+def convert_pdf (file: str, name: str, decorator: Callable [[str, tuple], str] = None, arguments: tuple = None) -> bool:
+    time_print (f"Attempting PDF conversion for {name}")
+
+    if os.path.exists (name):
+        time_print (f"{Fore.RED}PDF conversion error for {name}: File already exists")
+        return False
+    else:
+        if decorator:
+            file = decorator (file, arguments)
+
+        try:
+            pdfkit.from_string (file, name, options = {"enable-local-file-access": ""})
+        except Exception as exception:
+            time_print (f"{Fore.RED}PDF conversion error for {name}: {exception}")
+            return False
+
+        time_print (f"{Fore.GREEN}PDF conversion success for {name}")
+        return True
+
+'''
+Translates an HTML string to English
+
+file: str = file to translate
+arguments: tuple = translation information (name, translator, language)
+
+Pre: None
+Post: None
+Return: str = Translated file
+'''
+def translate_file (file: str, arguments: tuple) -> str:
+    name, translator, language = arguments
+    time_print (f"Attempting file translation for {name}")
+
+    try:
+        file = translator.translate_html (file, destination_language = "eng", source_language = language)
+    except Exception as exception:
+        time_print (f"{Fore.RED}File translation error for {name}: {exception}")
+        return None
+
+    return file
+
+'''
+Downloads an article as PDF
+
+information: tuple = page information (article, path, name)
+
+Pre: None
+Post: None
+Return: bool = True if PDF conversion succeeded, else False
+'''
+def download_article (information: tuple) -> bool:
     article, path, name = information
     time_print (f"Attempting article download for {path} as {name}")
 
-    if os.path.exists (name):
-        time_print (f"{Fore.RED}File creation error for {name}: File already exists")
-    else:
-        try:
-            pdfkit.from_string (article, name, options = {"enable-local-file-access": ""})
-        except Exception as exception:
-            time_print (f"{Fore.RED}PDF conversion error for {name}: {exception}")
-            return False
-
+    if convert_pdf (article, name):
         time_print (f"{Fore.GREEN}Article download success for {name}")
-
-    return True
+        return True
+    else:
+        time_print (f"{Fore.RED}Article download failure for {name}")
+        return False
 
 '''
-Downloads and translates an article as PDFs
+Translates an article as PDF
 
-information: tuple = page information (paths, date_times, translator, language)
+information: tuple = page information (article, path, name, translator, language)
 
 Pre: None
 Post: None
 Return: bool = True if PDF conversion succeeded, else False
 '''
-def download_translation (information):
+def download_translation (information: tuple) -> bool:
     article, path, name, translator, language = information
-    time_print (f"Attempting article translation for {path} as {name}")
+    time_print (f"Attempting translation download for {path} as {name}")
 
-    if os.path.exists (name):
-        time_print (f"{Fore.RED}File creation error for {name}: File already exists")
+    if convert_pdf (article, name, translate_file, (name, translator, language)):
+        time_print (f"{Fore.GREEN}Translation download success for {name}")
+        return True
     else:
-        try:
-            article = translator.translate_html (article, destination_language = "eng", source_language = language)
-        except Exception as exception:
-            time_print (f"{Fore.RED}Article translation error for {name}: {exception}")
-            return False
-
-        try:
-            pdfkit.from_string (article, name, options = {"enable-local-file-access": ""})
-        except Exception as exception:
-            time_print (f"{Fore.RED}PDF conversion error for {name}: {exception}")
-            return False
-
-        time_print (f"{Fore.GREEN}Article translation success for {name}")
-
-    return True
+        time_print (f"{Fore.RED}Translation download failure for {name}")
+        return False
 
 '''
 Downloads and translates a page
 
-pages: list of tuples = article information (file, path, date_time, translator, language, number)
+information: list of tuples = article information (path, names (original, converted), translator, language, number, download)
 
 Pre: None
 Post: None
 Return: None
 '''
-def download_page (information):
+def download_page (information: list):
     articles = []
     translations = []
     time_print (f"Downloading page {information [0] [4]}")
 
     for i in information:
-        path, name, translator, language, _ = i
+        path, names, translator, language, _, download = i
+        original, converted = names
 
-        if not os.path.exists (path) and not os.path.exists (convert_name (path)):
+        if not os.path.exists (original) and not os.path.exists (converted):
             article = import_file (path)
             article = BeautifulSoup (article.text, "html.parser")
             article = format_html (article)
-            converted = convert_name (name)
 
-            if not os.path.exists (path):
-                articles.append ((article, path, name))
+            if Download.ARTICLE in download:
+                articles.append ((article, path, original))
 
-            if not os.path.exists (converted):
+            if Download.TRANSLATION in download:
                 translations.append ((article, path, converted, translator, language))
 
-    with futures.ThreadPoolExecutor (44) as pool:
+    with futures.ThreadPoolExecutor (max_workers = 44) as pool:
         try:
             list (pool.map (download_article, articles, timeout = 30))
         except futures.TimeoutError:
@@ -228,13 +252,13 @@ def download_page (information):
 '''
 Sets (and creates, if necessary) new working directory
 
-path: string = path to directory
+path: str = path to directory
 
 Pre: None
 Post: None
-Return: string = new working directory
+Return: str = new working directory
 '''
-def set_directory (path):
+def set_directory (path: str) -> str:
     if not os.path.exists (path):
         os.makedirs (path)
 

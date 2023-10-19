@@ -13,18 +13,18 @@ from translatepy.translators import GoogleTranslate
 '''
 Downloads all LRT pages in a date range
 
-query: string = search query
-from_date: string = from date in YYYY-MM-DD format
-to_date: string = to date in YYYY-MM-DD format
-language: string = article language
+query: str = search query
+from_date: str = from date in YYYY-MM-DD format
+to_date: str = to date in YYYY-MM-DD format
+language: str = article language
 translator: Translator = article translator
 
 Pre: None
 Post: Changes current working directory
 Return: None
 '''
-def download_all_lrt (query, from_date, to_date, language, translator = None, concurrent = True):
-    category = None
+def download_all_lrt (query: str, from_date: str, to_date: str, language: str, translator: Translate = None, concurrent: bool = True):
+    category = ""
 
     if language == "lit":
         category = "order=desc"
@@ -47,22 +47,30 @@ def download_all_lrt (query, from_date, to_date, language, translator = None, co
         utilities.time_print (f"Getting information for page {i} of {math.ceil (int (page ['total_found']) / 44)}")
 
         for j in page ["items"]:
-            # article_category_id 19 is English news
+            # article_category_id = 19 is English news
             # TODO: Fix sports (article_category_id = 10, usually fails)
             if j ["is_video"] == 0 and j ["is_audio"] == 0 and (language != "lit" or j ["article_category_id"] != 19) and j ["article_category_id"] != 10:
                 path = f"https://www.lrt.lt{j ['url']}"
                 name = f"{''.join (filter (lambda c: c not in '. :', j ['item_date']))}.pdf"
+                converted = f"en_{name}"
+                download = utilities.Download (0)
 
-                if not os.path.exists (name) and not os.path.exists (utilities.convert_name (name)):
-                    information.append ((path, name, translator, language, i))
+                if not os.path.exists (name):
+                    download = download | utilities.Download.ARTICLE
+
+                if not os.path.exists (converted):
+                    download = download | utilities.Download.TRANSLATION
+
+                if utilities.Download.ARTICLE in download or utilities.Download.TRANSLATION in download:
+                    information.append ((path, (name, converted), translator, language, i, download))
 
         if concurrent:
             if len (information) > 0:
                 pages.append (information)
 
-            if i % pools == 0:
-                # with futures.ThreadPoolExecutor (pools) as pool:
-                with multiprocessing.Pool (pools) as pool:
+            if len (pages) == pools:
+                # with futures.ThreadPoolExecutor (max_workers = pools) as pool:
+                with multiprocessing.Pool (processes = pools) as pool:
                     pool.map (utilities.download_page, pages)
 
                 pages.clear ()
@@ -76,16 +84,16 @@ def download_all_lrt (query, from_date, to_date, language, translator = None, co
 Downloads all KW pages in a date range
 CURRENTLY DEPRECATED DUE TO ONGOING IMPROVEMENTS
 
-query: string = search query
-from_date: string = from date in YYYY-MM-DD format
-to_date: string = to date in YYYY-MM-DD format
-translator: Translator = article translator
+query: str = search query
+from_date: str = from date in YYYY-MM-DD format
+to_date: str = to date in YYYY-MM-DD format
+translator: Translate = article translator
 
 Pre: None
 Post: Changes current working directory
 Return: None
 '''
-def download_all_kw (query, from_date, to_date, translator):
+def download_all_kw (query: str, from_date: str, to_date: str, translator: Translate = None):
     pass
     # i = 1
     # page = utilities.import_file (f"https://kurierwilenski.lt/?s={query}")
@@ -118,16 +126,16 @@ def download_all_kw (query, from_date, to_date, translator):
 
 if __name__ == "__main__":
     colorama.init ()
-    # paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], lu = LRT [UA], kw = Kurier Wileński): ")
-    paper = "lrt"
+    paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], lu = LRT [UA], kw = Kurier Wileński): ")
+    # paper = "lrt"
 
     while paper != "lrt" and paper != "le" and paper != "lr" and paper != "lp" and paper != "lu" and paper != "kw":
         paper = input ("Invalid choice. Choose a paper: ")
 
-    # query = input ("Enter your query (blank queries are accepted): ")
-    # from_date = input ("Enter a from date (YYYY-MM-DD): ")
-    query = ""
-    from_date = "2020-01-01"
+    query = input ("Enter your query (blank queries are accepted): ")
+    from_date = input ("Enter a from date (YYYY-MM-DD): ")
+    # query = ""
+    # from_date = "2020-01-01"
 
     while True:
         try:
@@ -138,7 +146,7 @@ if __name__ == "__main__":
             break
 
     to_date = input ("Enter a to date (YYYY-MM-DD, blank entry means today): ")
-    # to_date = "2020-12-02"
+    # to_date = "2020-06-12"
 
     while True:
         if not to_date.strip ():
