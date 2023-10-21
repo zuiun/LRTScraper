@@ -1,6 +1,5 @@
 # import argparse
 import colorama
-import datetime
 import math
 import multiprocessing
 import os
@@ -8,6 +7,7 @@ import os
 import utilities
 # from bs4 import BeautifulSoup
 from concurrent import futures
+from datetime import date, datetime
 from translatepy import Translate
 from translatepy.translators import GoogleTranslate
 
@@ -27,6 +27,7 @@ Return: None
 def download_all_lrt (query: str, from_date: str, to_date: str, language: str, translator: Translate = None, concurrent: bool = True):
     category = ""
 
+    # TODO: Find correct category for Lithuanian
     if language == "lit":
         category = "order=desc"
     elif language == "eng":
@@ -47,19 +48,22 @@ def download_all_lrt (query: str, from_date: str, to_date: str, language: str, t
         utilities.time_print (f"Getting information for page {i} of {math.ceil (int (page ['total_found']) / 44)}")
 
         for j in page ["items"]:
-            # article_category_id = 19 is English news
-            # TODO: Fix sports (article_category_id = 10, usually fails)
-            if j ["is_video"] == 0 and j ["is_audio"] == 0 and (language != "lit" or j ["article_category_id"] != 19) and j ["article_category_id"] != 10:
+            if j ["is_video"] == 0 and j ["is_audio"] == 0:
+                # article_category_id = 19 is English news
+                # TODO: Fix sports (article_category_id = 10, extremely slow)
+                if (language == "lit" and j ["article_category_id"] != 19) or j ["article_category_id"] != 10:
+                    continue
+
                 path = f"https://www.lrt.lt{j ['url']}"
                 name = f"{''.join (filter (lambda c: c not in '. :', j ['item_date']))}.pdf"
                 converted = f"en_{name}"
                 download = utilities.Download (0)
 
                 if not os.path.exists (name):
-                    download = download | utilities.Download.ARTICLE
+                    download |= utilities.Download.ARTICLE
 
                 if not os.path.exists (converted):
-                    download = download | utilities.Download.TRANSLATION
+                    download |= utilities.Download.TRANSLATION
 
                 if utilities.Download.ARTICLE in download or utilities.Download.TRANSLATION in download:
                     information.append ((path, (name, converted), translator, language, i, download))
@@ -68,7 +72,7 @@ def download_all_lrt (query: str, from_date: str, to_date: str, language: str, t
             if len (information) > 0:
                 pages.append (information)
 
-            if len (pages) == utilities.THREADS:
+            if len (pages) == utilities.PROCESSES:
                 with futures.ThreadPoolExecutor (max_workers = utilities.THREADS) as pool:
                     articles, translations = zip (* pool.map (utilities.download_page, pages))
 
@@ -80,8 +84,14 @@ def download_all_lrt (query: str, from_date: str, to_date: str, language: str, t
                         # pool.terminate ()
 
                 pages.clear ()
-        else:
-            utilities.download_page (information)
+        elif len (information) > 0:
+            articles, translations = utilities.download_page (information)
+            
+            for j in articles:
+                utilities.download_article (j)
+
+            for j in translations:
+                utilities.download_translation (j)
 
         i += 1
         page = utilities.import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date}&dto={to_date}&{category}")
@@ -145,22 +155,22 @@ if __name__ == "__main__":
 
     while True:
         try:
-            datetime.date.fromisoformat (from_date)
+            date.fromisoformat (from_date)
         except ValueError as exception:
             from_date = input ("Invalid date. Enter a from date: ")
         else:
             break
 
     # to_date = input ("Enter a to date (YYYY-MM-DD, blank entry means today): ")
-    to_date = "2020-10-29"
+    to_date = "2020-12-01"
 
     while True:
         if not to_date.strip ():
-            to_date = datetime.datetime.now ().isoformat () [: 10]
+            to_date = datetime.now ().isoformat () [: 10]
             print (f"Today is {to_date}")
 
         try:
-            datetime.date.fromisoformat (to_date)
+            date.fromisoformat (to_date)
         except ValueError as exception:
             to_date = input ("Invalid date. Enter a to date: ")
         else:
@@ -169,23 +179,30 @@ if __name__ == "__main__":
             else:
                 break
 
+    # concurrent = input ("Use concurrency (y/n, concurrency is faster, but more error-prone): ")
+    concurrent = "n"
+
+    while concurrent != "y" and concurrent != "n":
+        paper = input ("Invalid choice. Use concurrency: ")
+
+    concurrent = True if concurrent == "y" else False
     translator = Translate ([GoogleTranslate])
 
     if paper == "lrt":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "lit"))
-        download_all_lrt (query, from_date, to_date, "lit", translator, True)
+        download_all_lrt (query, from_date, to_date, "lit", translator, concurrent)
     elif paper == "le":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "eng"))
-        download_all_lrt (query, from_date, to_date, "eng")
+        download_all_lrt (query, from_date, to_date, "eng", concurrent = concurrent)
     elif paper == "lr":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "rus"))
-        download_all_lrt (query, from_date, to_date, "rus", translator)
+        download_all_lrt (query, from_date, to_date, "rus", translator, concurrent)
     elif paper == "lp":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "pol"))
-        download_all_lrt (query, from_date, to_date, "pol", translator)
+        download_all_lrt (query, from_date, to_date, "pol", translator, concurrent)
     elif paper == "lu":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "lrt", "ukr"))
-        download_all_lrt (query, from_date, to_date, "ukr", translator)
+        download_all_lrt (query, from_date, to_date, "ukr", translator, concurrent)
     elif paper == "kw":
         utilities.set_directory (os.path.join (os.getcwd (), "articles", "kw"))
         download_all_kw (query, from_date, to_date, translator)

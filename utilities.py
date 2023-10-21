@@ -8,9 +8,8 @@ from colorama import Fore, Style
 from datetime import datetime
 from enum import auto, IntFlag
 
-MAX_PROCESSES = multiprocessing.cpu_count ()
-PROCESSES = 4
-THREADS = int (MAX_PROCESSES / PROCESSES)
+PROCESSES = multiprocessing.cpu_count ()
+THREADS = 12
 TIMEOUT = 300
 
 class Download (IntFlag):
