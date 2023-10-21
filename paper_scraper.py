@@ -51,7 +51,7 @@ def download_all_lrt (query: str, from_date: str, to_date: str, language: str, t
             if j ["is_video"] == 0 and j ["is_audio"] == 0:
                 # article_category_id = 19 is English news
                 # TODO: Fix sports (article_category_id = 10, extremely slow)
-                if (language == "lit" and j ["article_category_id"] != 19) or j ["article_category_id"] != 10:
+                if (language == "lit" and j ["article_category_id"] != 19) or j ["article_category_id"] == 10:
                     continue
 
                 path = f"https://www.lrt.lt{j ['url']}"
@@ -86,7 +86,7 @@ def download_all_lrt (query: str, from_date: str, to_date: str, language: str, t
                 pages.clear ()
         elif len (information) > 0:
             articles, translations = utilities.download_page (information)
-            
+
             for j in articles:
                 utilities.download_article (j)
 
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     # query = input ("Enter your query (blank queries are accepted): ")
     # from_date = input ("Enter a from date (YYYY-MM-DD): ")
     query = ""
-    from_date = "2020-07-01"
+    from_date = "2020-01-01"
 
     while True:
         try:
@@ -162,7 +162,7 @@ if __name__ == "__main__":
             break
 
     # to_date = input ("Enter a to date (YYYY-MM-DD, blank entry means today): ")
-    to_date = "2020-12-01"
+    to_date = "2020-02-19"
 
     while True:
         if not to_date.strip ():
@@ -180,7 +180,7 @@ if __name__ == "__main__":
                 break
 
     # concurrent = input ("Use concurrency (y/n, concurrency is faster, but more error-prone): ")
-    concurrent = "n"
+    concurrent = "y"
 
     while concurrent != "y" and concurrent != "n":
         paper = input ("Invalid choice. Use concurrency: ")
