@@ -27,13 +27,12 @@ Return: None
 def download_all_lrt (query: str, from_date: str, to_date: str, language: str, translator: Translate = None, concurrent: bool = True):
     category = ""
 
-    # TODO: Find correct category for Lithuanian
     if language == "lit":
         category = "order=desc"
-    elif language == "eng":
-        category = "category_id=19"
     elif language == "rus":
         category = "category_id=17"
+    elif language == "eng":
+        category = "category_id=19"
     elif language == "pol":
         category = "category_id=1261"
     elif language == "ukr":
@@ -48,10 +47,10 @@ def download_all_lrt (query: str, from_date: str, to_date: str, language: str, t
         utilities.time_print (f"Getting information for page {i} of {math.ceil (int (page ['total_found']) / 44)}")
 
         for j in page ["items"]:
-            if j ["is_video"] == 0 and j ["is_audio"] == 0:
-                # article_category_id = 19 is English news
+            # If scraping Lithuanian articles, skip non-Lithuanian articles
+            if j ["is_video"] == 0 and j ["is_audio"] == 0 and (language != "lit" or (j ["article_category_id"] != 17 and j ["article_category_id"] != 19 and j ["article_category_id"] != 1261 and j ["article_category_id"] != 1263)):
                 # TODO: Fix sports (article_category_id = 10, extremely slow)
-                if (language == "lit" and j ["article_category_id"] != 19) or j ["article_category_id"] == 10:
+                if j ["article_category_id"] == 10:
                     continue
 
                 path = f"https://www.lrt.lt{j ['url']}"
@@ -73,10 +72,12 @@ def download_all_lrt (query: str, from_date: str, to_date: str, language: str, t
                 pages.append (information)
 
             if len (pages) == utilities.PROCESSES:
+                # Maps each page to a thread
                 with futures.ThreadPoolExecutor (max_workers = utilities.THREADS) as pool:
                     articles, translations = zip (* pool.map (utilities.download_page, pages))
 
                 for i in range (len (pages)):
+                    # Maps each article to a process
                     with multiprocessing.Pool (processes = utilities.PROCESSES) as pool:
                         pool.map (utilities.download_article, articles [i])
                         pool.map (utilities.download_translation, translations [i])
@@ -162,7 +163,7 @@ if __name__ == "__main__":
             break
 
     # to_date = input ("Enter a to date (YYYY-MM-DD, blank entry means today): ")
-    to_date = "2020-02-19"
+    to_date = "2020-02-07"
 
     while True:
         if not to_date.strip ():
