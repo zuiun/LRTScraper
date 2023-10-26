@@ -143,16 +143,16 @@ def download_all_kw (query: str, from_date: str, to_date: str, translator: Trans
 
 if __name__ == "__main__":
     colorama.init ()
-    # paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], lu = LRT [UA], kw = Kurier Wileński): ")
-    paper = "lrt"
+    paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], lu = LRT [UA], kw = Kurier Wileński): ")
+    # paper = "lrt"
 
     while paper != "lrt" and paper != "le" and paper != "lr" and paper != "lp" and paper != "lu" and paper != "kw":
         paper = input ("Invalid choice. Choose a paper: ")
 
-    # query = input ("Enter your query (blank queries are accepted): ")
-    # from_date = input ("Enter a from date (YYYY-MM-DD): ")
-    query = ""
-    from_date = "2020-01-01"
+    query = input ("Enter your query (blank queries are accepted): ")
+    from_date = input ("Enter a from date (YYYY-MM-DD): ")
+    # query = ""
+    # from_date = "2022-01-01"
 
     while True:
         try:
@@ -162,8 +162,8 @@ if __name__ == "__main__":
         else:
             break
 
-    # to_date = input ("Enter a to date (YYYY-MM-DD, blank entry means today): ")
-    to_date = "2020-02-07"
+    to_date = input ("Enter a to date (YYYY-MM-DD, blank entry means today): ")
+    # to_date = "2022-05-31"
 
     while True:
         if not to_date.strip ():
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     concurrent = "y"
 
     while concurrent != "y" and concurrent != "n":
-        paper = input ("Invalid choice. Use concurrency: ")
+        concurrent = input ("Invalid choice. Use concurrency: ")
 
     concurrent = True if concurrent == "y" else False
     translator = Translate ([GoogleTranslate])
