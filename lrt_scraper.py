@@ -1,4 +1,3 @@
-# import argparse
 # import calendar
 import colorama
 import math
@@ -6,7 +5,9 @@ import math
 import os
 import pdfkit
 import requests
+import sys
 import time
+from argparse import ArgumentParser, SUPPRESS
 from bs4 import BeautifulSoup
 from collections.abc import Callable
 from colorama import Fore, Style
@@ -17,6 +18,11 @@ from translatepy import Translate
 from translatepy.translators import GoogleTranslate
 
 WORKING_DIRECTORY_BASE = None
+PAGES = 12
+# There are 44 articles per page
+PROCESSES = 44
+LANGUAGES = ["lit", "eng", "rus", "pol", "ukr"]
+verbose = False
 
 class Download (IntFlag):
     ARTICLE = auto ()
@@ -233,7 +239,7 @@ def set_directory (path: str) -> str:
     return path
 
 '''
-Downloads all LRT pages in a date range
+Downloads all pages in a date range
 
 query: str = search query
 from_date: date = from date in ISO format
@@ -245,7 +251,7 @@ Pre: None
 Post: Changes current working directory
 Return: None
 '''
-def download_all_lrt (query: str, from_date: date, to_date: date, language: str, translator: Translate = None, concurrent: bool = True):
+def download_all (query: str, from_date: date, to_date: date, language: str, translator: Translate = None, concurrent: bool = True):
     category = ""
 
     if language == "lit":
@@ -276,91 +282,23 @@ def download_all_lrt (query: str, from_date: date, to_date: date, language: str,
     #             months.append (month_start, month_end)
 
     # for i in months:
-    #     page += 1
-    #     api = import_json (f"https://www.lrt.lt/api/search?page={page}&q={query}&count=44&dfrom={i [0].isoformat ()}&dto={i [1].isoformat ()}&{category}")
-    #     pages = []
     #     set_directory (WORKING_DIRECTORY_BASE, i [0].month)
 
-    #     while len (api ["items"]) > 0:
-    #         information = []
-    #         time_print (f"Getting information for page {i} of {math.ceil (int (api ['total_found']) / 44)}")
-    #         start = time.perf_counter ()
-    #         downloaded = 0
-
-    #         for j in api ["items"]:
-    #             # If scraping Lithuanian articles, skip non-Lithuanian articles
-    #             if j ["is_video"] == 0 and j ["is_audio"] == 0 and (language != "lit" or (j ["article_category_id"] != 17 and j ["article_category_id"] != 19 and j ["article_category_id"] != 1261 and j ["article_category_id"] != 1263)):
-    #                 # TODO: Fix sports (article_category_id = 10, extremely slow)
-    #                 if j ["article_category_id"] == 10:
-    #                     continue
-
-    #                 path = f"https://www.lrt.lt{j ['url']}"
-    #                 name = f"{''.join (filter (lambda c: c not in '. :', j ['item_date']))}.pdf"
-    #                 converted = f"en_{name}"
-    #                 download = Download (0)
-
-    #                 if not os.path.exists (name):
-    #                     download |= Download.ARTICLE
-
-    #                 if not os.path.exists (converted):
-    #                     download |= Download.TRANSLATION
-
-    #                 if Download.ARTICLE in download or Download.TRANSLATION in download:
-    #                     information.append ((path, (name, converted), translator, language, i, download))
-
-    #         if concurrent:
-    #             if len (information) > 0:
-    #                 pages.append (information)
-
-    #             if len (pages) == PROCESSES:
-    #                 # Maps each page to a thread
-    #                 with futures.ThreadPoolExecutor (max_workers = THREADS) as pool:
-    #                     articles, translations = zip (* pool.map (download_page, pages))
-
-    #                 for i in range (len (pages)):
-    #                     # Maps each article to a process
-    #                     with multiprocessing.Pool (processes = PROCESSES) as pool:
-    #                         downloaded = pool.map (download_article, articles [i]).count (True)
-    #                         downloaded += pool.map (download_translation, translations [i]).count (True)
-    #                         # time.sleep (TIMEOUT)
-    #                         # pool.terminate ()
-
-    #                 pages.clear ()
-    #                 # processes = max (20): 
-    #                 # processes = max (20): 
-    #                 # processes = max (20): 
-    #                 # processes = max (20): 
-    #                 # average, processes = max (20): 
-    #                 total = time.perf_counter () - start
-    #                 time_print (f"{colorama.Fore.CYAN}Downloaded {downloaded} articles in {total} sec, {downloaded / total} articles / sec")
-    #         elif len (information) > 0:
-    #             articles, translations = download_page (information)
-
-    #             for j in articles:
-    #                 downloaded += download_article (j)
-
-    #             for j in translations:
-    #                 downloaded += download_translation (j)
-
-    #             # ~ 0.40 articles / sec
-    #             total = time.perf_counter () - start
-    #             time_print (f"{colorama.Fore.CYAN}Downloaded {downloaded} articles in {total} sec, {downloaded / total} articles / sec{colorama.Style.RESET_ALL}")
-
     i = 1
-    page = import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date.isoformat ()}&dto={to_date.isoformat ()}&{category}")
+    search = import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date.isoformat ()}&dto={to_date.isoformat ()}&{category}")
     pages = []
-    total = math.ceil (int (page ['total_found']) / 44)
+    total = math.ceil (int (search ['total_found']) / 44)
 
-    while len (page ["items"]) > 0:
-        information = []
+    while len (search ["items"]) > 0:
+        page = []
         time_print (f"Getting information for page {i} of {total}")
         start = time.perf_counter ()
         downloaded = 0
 
-        for j in page ["items"]:
+        for j in search ["items"]:
             # If scraping Lithuanian articles, skip non-Lithuanian articles
             if j ["is_video"] == 0 and j ["is_audio"] == 0 and (language != "lit" or (j ["article_category_id"] != 17 and j ["article_category_id"] != 19 and j ["article_category_id"] != 1261 and j ["article_category_id"] != 1263)):
-                # TODO: Fix sports (article_category_id = 10, extremely slow)
+                # Skip sports (article_category_id = 10, extremely slow)
                 if j ["article_category_id"] == 10:
                     continue
 
@@ -376,48 +314,49 @@ def download_all_lrt (query: str, from_date: date, to_date: date, language: str,
                     download |= Download.TRANSLATION
 
                 if Download.ARTICLE in download or Download.TRANSLATION in download:
-                    information.append ((path, (name, converted), translator, language, i, download))
+                    page.append ((path, (name, converted), translator, language, i, download))
 
         if concurrent:
-            if len (information) > 0:
-                pages.append (information)
+            if len (page) > 0:
+                pages.append (page)
 
-            if len (pages) == 12 or i == total:
-                # Maps each page to a thread
-                with futures.ThreadPoolExecutor (max_workers = 44) as pool:
-                    articles = pool.map (download_page, pages)
-                    
-                    for j in articles:
-                        results = pool.map (download_article, j)
-                        downloaded += list (results).count (True)
+            if len (pages) == PAGES or i == total:
+                with futures.ThreadPoolExecutor (max_workers = PROCESSES) as pool:
+                    articles = [k for j in pool.map (download_page, pages) for k in j]
+                    articles = pool.map (download_article, articles)
+                    downloaded += list (articles).count (True)
 
                 pages.clear ()
-                # ~ 0.20 - 0.80 articles / sec
-                total = time.perf_counter () - start
-                time_print (f"{Fore.CYAN}Downloaded {downloaded} articles in {total} sec, {downloaded / total} articles / sec")
-        elif len (information) > 0:
-            for j in download_page (information):
+        elif len (page) > 0:
+            for j in download_page (page):
                 downloaded += download_article (j)
 
-            # ~ 0.40 articles / sec
-            total = time.perf_counter () - start
-            time_print (f"{Fore.CYAN}Downloaded {downloaded} articles in {total} sec, {downloaded / total} articles / sec{Style.RESET_ALL}")
+        # concurrent ~= 0.20 - 0.80 articles / sec
+        # sequential ~= 0.40 articles / sec
+        if downloaded > 0:
+            total = round (time.perf_counter () - start)
+            time_print (f"{Fore.CYAN}Downloaded {downloaded} articles in {total} sec, {round (downloaded / total, 2)} articles / sec{Style.RESET_ALL}")
 
         i += 1
-        page = import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date.isoformat ()}&dto={to_date.isoformat ()}&{category}")
+        search = import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date.isoformat ()}&dto={to_date.isoformat ()}&{category}")
 
 if __name__ == "__main__":
+    parser = ArgumentParser (prog = "LRT Scraper", description = "Web scraper for LRT, Lithuania's largest news service.")
+    parser.add_argument ("-l", "--language", choices = LANGUAGES, default = SUPPRESS, help = "language of articles")
+    parser.add_argument ("-q", "--query", nargs = "?", const = "", default = SUPPRESS, help = "search query (blank accepted)")
+    parser.add_argument ("-f", "--from", dest = "from_date", default = SUPPRESS, help = "search from date (ISO, YYYY-MM-DD)")
+    parser.add_argument ("-t", "--to", nargs = "?", const = "", dest = "to_date", default = SUPPRESS, help = "search to date (ISO, YYYY-MM-DD, blank means today)")
+    parser.add_argument ("-c", "--concurrent", action = "store_true", default = SUPPRESS, help = "use concurrency (may be faster and more reliable)")
+    parser.add_argument ("-v", "--verbose", action = "store_true")
+    arguments = parser.parse_args ()
     colorama.init ()
-    # paper = input ("Choose a paper (lrt = LRT [LT], le = LRT [EN], lr = LRT [RU], lp = LRT [PL], lu = LRT [UA], kw = Kurier Wileński): ")
-    paper = "lrt"
+    language = arguments.language if "language" in arguments else input ("Choose a language (lit, eng, rus, pol, ukr): ")
 
-    while paper != "lrt" and paper != "le" and paper != "lr" and paper != "lp" and paper != "lu":
-        paper = input ("Invalid choice. Choose a paper: ")
+    while language not in LANGUAGES:
+        language = input ("Invalid choice. Choose a language: ")
 
-    # query = input ("Enter your query (blank queries are accepted): ")
-    # from_date = input ("Enter a from date (YYYY-MM-DD): ")
-    query = ""
-    from_date = "2023-05-01"
+    query = arguments.query if "query" in arguments else input ("Enter your query (blank queries are accepted): ")
+    from_date = arguments.from_date if "from_date" in arguments else input ("Enter a from date (ISO, YYYY-MM-DD): ")
 
     while True:
         try:
@@ -427,13 +366,13 @@ if __name__ == "__main__":
         else:
             break
 
-    # to_date = input ("Enter a to date (ISO, YYYY-MM-DD, blank entry means today): ")
-    to_date = "2023-05-02"
+    to_date = arguments.to_date if "to_date" in arguments else input ("Enter a to date (ISO, YYYY-MM-DD, blank entry means today): ")
 
     while True:
         if not to_date.strip ():
             to_date = date.today ()
-            print (f"Today is {to_date}")
+            print (f"Using today ({to_date}) as to date")
+            break
 
         try:
             to_date = date.fromisoformat (to_date)
@@ -445,27 +384,17 @@ if __name__ == "__main__":
             else:
                 break
 
-    # concurrent = input ("Use concurrency (y/n, concurrency is slower, but more reliable): ")
-    concurrent = "y"
+    concurrent = arguments.concurrent if "concurrent" in arguments else input ("Use concurrency (y/n, may be faster and more reliable): ")
 
-    while concurrent != "y" and concurrent != "n":
+    while concurrent != "y" and concurrent != "n" and concurrent != True and concurrent != False:
         concurrent = input ("Invalid choice. Use concurrency: ")
 
-    concurrent = True if concurrent == "y" else False
-    translator = Translate ([GoogleTranslate])
+    if concurrent == "y":
+        concurrent = True
+    elif concurrent == "n":
+        concurrent = False
 
-    if paper == "lrt":
-        WORKING_DIRECTORY_BASE = set_directory (os.path.join (os.getcwd (), "articles", "lrt", "lit"))
-        download_all_lrt (query, from_date, to_date, "lit", translator, concurrent)
-    elif paper == "le":
-        WORKING_DIRECTORY_BASE = set_directory (os.path.join (os.getcwd (), "articles", "lrt", "eng"))
-        download_all_lrt (query, from_date, to_date, "eng", concurrent = concurrent)
-    elif paper == "lr":
-        WORKING_DIRECTORY_BASE = set_directory (os.path.join (os.getcwd (), "articles", "lrt", "rus"))
-        download_all_lrt (query, from_date, to_date, "rus", translator, concurrent)
-    elif paper == "lp":
-        WORKING_DIRECTORY_BASE = set_directory (os.path.join (os.getcwd (), "articles", "lrt", "pol"))
-        download_all_lrt (query, from_date, to_date, "pol", translator, concurrent)
-    elif paper == "lu":
-        WORKING_DIRECTORY_BASE = set_directory (os.path.join (os.getcwd (), "articles", "lrt", "ukr"))
-        download_all_lrt (query, from_date, to_date, "ukr", translator, concurrent)
+    verbose = arguments.verbose
+    translator = None if language == "eng" else Translate ([GoogleTranslate])
+    WORKING_DIRECTORY_BASE = set_directory (os.path.join (os.getcwd (), "articles", "lrt", language))
+    download_all (query, from_date, to_date, language, translator, concurrent)

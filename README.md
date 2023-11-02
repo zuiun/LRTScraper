@@ -1,6 +1,6 @@
-# Paper Scraper
+# LRT Scraper
 
-Web scraper that can scrape LRT and Kurier Wileński.
+Web scraper for [LRT](https://www.lrt.lt/), Lithuania's largest news service.
 
 ## Installation
 
@@ -14,4 +14,4 @@ You may choose not to do this if you know how to change pdfkit's path to wkhtmlt
 
 ## Usage
 
-Run `paper_scraper.py` and follow the directions.
+Run `lrt_scraper.py` and follow the directions.
