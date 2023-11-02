@@ -1,1 +1,1 @@
-python .\lrt_scraper.py -l lit -q -f 2023-01-01 -t 2023-02-14 -c
+python lrt_scraper.py -l lit -q -f 2023-01-01 -t 2023-04-30 -c

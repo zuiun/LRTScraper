@@ -1,4 +1,4 @@
-# import calendar
+import calendar
 import colorama
 import math
 # import multiprocessing
@@ -22,7 +22,6 @@ PAGES = 12
 # There are 44 articles per page
 PROCESSES = 44
 LANGUAGES = ["lit", "eng", "rus", "pol", "ukr"]
-verbose = False
 
 class Download (IntFlag):
     ARTICLE = auto ()
@@ -160,7 +159,7 @@ Return: str = Translated file
 '''
 def translate_file (file: str, arguments: tuple) -> str:
     name, translator, language = arguments
-    time_print (f"Attempting file translation for {name}")
+    time_print (f"Attempting article translation for {name}")
 
     try:
         file = translator.translate_html (file, destination_language = "eng", source_language = language)
@@ -242,8 +241,8 @@ def set_directory (path: str) -> str:
 Downloads all pages in a date range
 
 query: str = search query
-from_date: date = from date in ISO format
-to_date: date = to date in ISO format
+from_date: date = search from date
+to_date: date = search to date
 language: str = article language
 translator: Translator = article translator
 
@@ -265,84 +264,82 @@ def download_all (query: str, from_date: date, to_date: date, language: str, tra
     elif language == "ukr":
         category = "category_id=1263"
 
-    # months = []
-    # page = 0
+    for i in range (from_date.year, to_date.year + 1):
+        year_base = set_directory (os.path.join (WORKING_DIRECTORY_BASE, str (i)))
 
-    # for i in range (from_date.year, to_date.year - from_date.year):
-    #     for j in range (from_date.month, to_date.month - from_date.month):
-    #         month_start = date (i, j, 1)
-    #         month_length = calendar.monthrange (month_start.year, month_start.month) [1]
-    #         month_end = date (i, j, month_length)
+        for j in range (1, 13):
+            if date (i, j, from_date.day) >= from_date and date (i, j, 1) <= to_date:
+                set_directory (os.path.join (year_base, f"0{j}" if j < 10 else str (j)))
+                month_start = date (i, j, 1)
+                month_length = calendar.monthrange (month_start.year, month_start.month) [1]
+                month_end = date (i, j, month_length)
 
-    #         if j == from_date.month:
-    #             months.append ((from_date, month_end))
-    #         elif j == to_date.month:
-    #             months.append ((month_start, to_date))
-    #         else:
-    #             months.append (month_start, month_end)
+                if j == from_date.month:
+                    month = (from_date, month_end)
+                elif j == to_date.month:
+                    month = (month_start, to_date)
+                else:
+                    month = (month_start, month_end)
 
-    # for i in months:
-    #     set_directory (WORKING_DIRECTORY_BASE, i [0].month)
+                k = 1
+                search = import_json (f"https://www.lrt.lt/api/search?page={k}&q={query}&count=44&dfrom={month [0].isoformat ()}&dto={month [1].isoformat ()}&{category}")
+                pages = []
+                total = math.ceil (int (search ['total_found']) / 44)
 
-    i = 1
-    search = import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date.isoformat ()}&dto={to_date.isoformat ()}&{category}")
-    pages = []
-    total = math.ceil (int (search ['total_found']) / 44)
+                while len (search ["items"]) > 0:
+                    page = []
+                    time_print (f"Getting information for page {k} of {total}")
+                    start = time.perf_counter ()
+                    downloads = 0
 
-    while len (search ["items"]) > 0:
-        page = []
-        time_print (f"Getting information for page {i} of {total}")
-        start = time.perf_counter ()
-        downloaded = 0
+                    for j in search ["items"]:
+                        # If scraping Lithuanian articles, skip non-Lithuanian articles
+                        if j ["is_video"] == 0 and j ["is_audio"] == 0 and (language != "lit" or (j ["article_category_id"] != 17 and j ["article_category_id"] != 19 and j ["article_category_id"] != 1261 and j ["article_category_id"] != 1263)):
+                            # Skip sports (article_category_id = 10, extremely slow)
+                            if j ["article_category_id"] == 10:
+                                continue
 
-        for j in search ["items"]:
-            # If scraping Lithuanian articles, skip non-Lithuanian articles
-            if j ["is_video"] == 0 and j ["is_audio"] == 0 and (language != "lit" or (j ["article_category_id"] != 17 and j ["article_category_id"] != 19 and j ["article_category_id"] != 1261 and j ["article_category_id"] != 1263)):
-                # Skip sports (article_category_id = 10, extremely slow)
-                if j ["article_category_id"] == 10:
-                    continue
+                            path = f"https://www.lrt.lt{j ['url']}"
+                            name = f"{''.join (filter (lambda c: c not in '. :', j ['item_date']))}.pdf"
+                            converted = f"en_{name}"
+                            download = Download (0)
 
-                path = f"https://www.lrt.lt{j ['url']}"
-                name = f"{''.join (filter (lambda c: c not in '. :', j ['item_date']))}.pdf"
-                converted = f"en_{name}"
-                download = Download (0)
+                            if not os.path.exists (name):
+                                download |= Download.ARTICLE
 
-                if not os.path.exists (name):
-                    download |= Download.ARTICLE
+                            if not os.path.exists (converted):
+                                download |= Download.TRANSLATION
 
-                if not os.path.exists (converted):
-                    download |= Download.TRANSLATION
+                            if Download.ARTICLE in download or Download.TRANSLATION in download:
+                                page.append ((path, (name, converted), translator, language, k, download))
 
-                if Download.ARTICLE in download or Download.TRANSLATION in download:
-                    page.append ((path, (name, converted), translator, language, i, download))
+                    if concurrent:
+                        if len (page) > 0:
+                            pages.append (page)
 
-        if concurrent:
-            if len (page) > 0:
-                pages.append (page)
+                        if len (pages) == PAGES or k == total:
+                            with futures.ThreadPoolExecutor (max_workers = PROCESSES) as pool:
+                                articles = [k for j in pool.map (download_page, pages) for k in j]
+                                articles = pool.map (download_article, articles)
+                                downloads += list (articles).count (True)
 
-            if len (pages) == PAGES or i == total:
-                with futures.ThreadPoolExecutor (max_workers = PROCESSES) as pool:
-                    articles = [k for j in pool.map (download_page, pages) for k in j]
-                    articles = pool.map (download_article, articles)
-                    downloaded += list (articles).count (True)
+                            pages.clear ()
+                    elif len (page) > 0:
+                        for j in download_page (page):
+                            downloads += download_article (j)
 
-                pages.clear ()
-        elif len (page) > 0:
-            for j in download_page (page):
-                downloaded += download_article (j)
+                    # concurrent ~= 0.20 - 0.80 articles / sec
+                    # sequential ~= 0.40 articles / sec
+                    if downloads > 0:
+                        total = round (time.perf_counter () - start)
+                        time_print (f"{Fore.CYAN}Downloaded {downloads} articles in {total} sec, {round (downloads / total, 2)} articles / sec{Style.RESET_ALL}")
 
-        # concurrent ~= 0.20 - 0.80 articles / sec
-        # sequential ~= 0.40 articles / sec
-        if downloaded > 0:
-            total = round (time.perf_counter () - start)
-            time_print (f"{Fore.CYAN}Downloaded {downloaded} articles in {total} sec, {round (downloaded / total, 2)} articles / sec{Style.RESET_ALL}")
-
-        i += 1
-        search = import_json (f"https://www.lrt.lt/api/search?page={i}&q={query}&count=44&dfrom={from_date.isoformat ()}&dto={to_date.isoformat ()}&{category}")
+                    k += 1
+                    search = import_json (f"https://www.lrt.lt/api/search?page={k}&q={query}&count=44&dfrom={month [0].isoformat ()}&dto={month [1].isoformat ()}&{category}")
 
 if __name__ == "__main__":
     parser = ArgumentParser (prog = "LRT Scraper", description = "Web scraper for LRT, Lithuania's largest news service.")
-    parser.add_argument ("-l", "--language", choices = LANGUAGES, default = SUPPRESS, help = "language of articles")
+    parser.add_argument ("-l", "--language", choices = LANGUAGES, default = SUPPRESS, help = "article language")
     parser.add_argument ("-q", "--query", nargs = "?", const = "", default = SUPPRESS, help = "search query (blank accepted)")
     parser.add_argument ("-f", "--from", dest = "from_date", default = SUPPRESS, help = "search from date (ISO, YYYY-MM-DD)")
     parser.add_argument ("-t", "--to", nargs = "?", const = "", dest = "to_date", default = SUPPRESS, help = "search to date (ISO, YYYY-MM-DD, blank means today)")
@@ -394,7 +391,8 @@ if __name__ == "__main__":
     elif concurrent == "n":
         concurrent = False
 
-    verbose = arguments.verbose
     translator = None if language == "eng" else Translate ([GoogleTranslate])
-    WORKING_DIRECTORY_BASE = set_directory (os.path.join (os.getcwd (), "articles", "lrt", language))
+    global verbose
+    verbose = arguments.verbose
+    WORKING_DIRECTORY_BASE = set_directory (os.path.join (os.getcwd (), "articles", language))
     download_all (query, from_date, to_date, language, translator, concurrent)
