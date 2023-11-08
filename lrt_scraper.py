@@ -108,13 +108,6 @@ def format_html (file: BeautifulSoup) -> str:
     for i in file.css.select ("style"):
         i.decompose ()
 
-    # Remove elements specific to KW
-    # for i in file.css.select ("div.td-is-sticky"):
-    #     i.decompose ()
-
-    # for i in file.css.select ("div.tdc-element-style"):
-    #     i.decompose ()
-
     return file.prettify ()
 
 '''
@@ -270,16 +263,10 @@ def download_all (query: str, from_date: date, to_date: date, language: str, tra
         for j in range (1, 13):
             if date (i, j, from_date.day) >= from_date and date (i, j, 1) <= to_date:
                 set_directory (os.path.join (year_base, f"0{j}" if j < 10 else str (j)))
-                month_start = date (i, j, 1)
+                month_start = from_date if j == from_date.month else date (i, j, 1)
                 month_length = calendar.monthrange (month_start.year, month_start.month) [1]
-                month_end = date (i, j, month_length)
-
-                if j == from_date.month:
-                    month = (from_date, month_end)
-                elif j == to_date.month:
-                    month = (month_start, to_date)
-                else:
-                    month = (month_start, month_end)
+                month_end = to_date if j == to_date.month else date (i, j, month_length)
+                month = (month_start, month_end)
 
                 k = 1
                 search = import_json (f"https://www.lrt.lt/api/search?page={k}&q={query}&count=44&dfrom={month [0].isoformat ()}&dto={month [1].isoformat ()}&{category}")
