@@ -1,11 +1,10 @@
 import calendar
 import colorama
 import math
-# import multiprocessing
 import os
 import pdfkit
 import requests
-import sys
+import threading
 import time
 from argparse import ArgumentParser, SUPPRESS
 from bs4 import BeautifulSoup
@@ -22,6 +21,7 @@ PAGES = 12
 # There are 44 articles per page
 PROCESSES = 44
 LANGUAGES = ["lit", "eng", "rus", "pol", "ukr"]
+LOCK = threading.Lock ()
 
 class Download (IntFlag):
     ARTICLE = auto ()
@@ -31,13 +31,16 @@ class Download (IntFlag):
 Prints text with timestamp
 
 text: str = text to print
+force: bool = forcibly print
 
 Pre: None
 Post: None
 Return: None
 '''
-def time_print (text: str):
-    print (f"{Fore.YELLOW}{datetime.now ().strftime ('%H:%M:%S')}{Style.RESET_ALL}: {text}{Style.RESET_ALL}", flush = True)
+def time_print (text: str, force: bool = False):
+    if verbose or force:
+        with LOCK:
+            print (f"{Fore.YELLOW}{datetime.now ().strftime ('%H:%M:%S')}{Style.RESET_ALL}: {text}{Style.RESET_ALL}", flush = True)
 
 '''
 Imports a file
@@ -52,16 +55,16 @@ def import_file (path: str) -> requests.Response:
     try:
         file = requests.get (path, timeout = 10)
     except requests.exceptions.Timeout as exception:
-        time_print (f"{Fore.RED}File timeout error for {path}: {exception}")
+        time_print (f"{Fore.RED}File timeout error for {path}: {exception}", True)
         return None
     except requests.exceptions.SSLError as exception:
-        time_print (f"Retrying due to {Fore.RED}SSL error for {path}: {exception}")
+        time_print (f"Retrying due to {Fore.RED}SSL error for {path}: {exception}", True)
         file = requests.get (path, timeout = 10, verify = False)
 
     try:
         file.raise_for_status ()
     except requests.exceptions.HTTPError as exception:
-        time_print (f"{Fore.RED}File import error for {path}: {exception}")
+        time_print (f"{Fore.RED}File import error for {path}: {exception}", True)
         return None
 
     file.encoding = "UTF-8"
@@ -126,7 +129,7 @@ def convert_pdf (file: str, name: str, decorator: Callable [[str, tuple], str] =
     time_print (f"Attempting PDF conversion for {name}")
 
     if os.path.exists (name):
-        time_print (f"{Fore.RED}PDF conversion error for {name}: File already exists")
+        time_print (f"{Fore.RED}PDF conversion error for {name}: File already exists", True)
         return False
     else:
         if decorator:
@@ -135,7 +138,7 @@ def convert_pdf (file: str, name: str, decorator: Callable [[str, tuple], str] =
         try:
             pdfkit.from_string (file, name, options = {"enable-local-file-access": ""})
         except Exception as exception:
-            time_print (f"{Fore.RED}PDF conversion error for {name}: {exception}")
+            time_print (f"{Fore.RED}PDF conversion error for {name}: {exception}", True)
             return False
 
         return True
@@ -157,7 +160,7 @@ def translate_file (file: str, arguments: tuple) -> str:
     try:
         file = translator.translate_html (file, destination_language = "eng", source_language = language)
     except Exception as exception:
-        time_print (f"{Fore.RED}File translation error for {name}: {exception}")
+        time_print (f"{Fore.RED}File translation error for {name}: {exception}", True)
         return None
 
     return file
@@ -173,13 +176,13 @@ Return: bool = True if PDF conversion succeeded, else False
 '''
 def download_article (information: tuple) -> bool:
     article, path, name, * translation = information
-    time_print (f"Attempting article download for {path} as {name}")
+    time_print (f"Attempting article download for {path} as {name}", True)
 
     if len (translation) == 2 and convert_pdf (article, name, translate_file, (name, translation [0], translation [1])):
-        time_print (f"{Fore.GREEN}Translation download success for {name}")
+        time_print (f"{Fore.GREEN}Translation download success for {name}", True)
         return True
     elif convert_pdf (article, name):
-        time_print (f"{Fore.GREEN}Article download success for {name}")
+        time_print (f"{Fore.GREEN}Article download success for {name}", True)
         return True
     else:
         time_print (f"{Fore.RED}Article download failure for {name}")
@@ -196,7 +199,7 @@ Return: list of tuples = article data (article, path, name, translator, language
 '''
 def download_page (information: list) -> list:
     articles = []
-    time_print (f"Downloading page {information [0] [4]}")
+    time_print (f"Downloading page {information [0] [4]}", True)
 
     for i in information:
         path, names, translator, language, _, download = i
@@ -271,11 +274,11 @@ def download_all (query: str, from_date: date, to_date: date, language: str, tra
                 k = 1
                 search = import_json (f"https://www.lrt.lt/api/search?page={k}&q={query}&count=44&dfrom={month [0].isoformat ()}&dto={month [1].isoformat ()}&{category}")
                 pages = []
-                total = math.ceil (int (search ['total_found']) / 44)
+                total_pages = math.ceil (int (search ['total_found']) / 44)
 
                 while len (search ["items"]) > 0:
                     page = []
-                    time_print (f"Getting information for page {k} of {total}")
+                    time_print (f"Getting information for page {k} of {total_pages}")
                     start = time.perf_counter ()
                     downloads = 0
 
@@ -304,7 +307,7 @@ def download_all (query: str, from_date: date, to_date: date, language: str, tra
                         if len (page) > 0:
                             pages.append (page)
 
-                        if len (pages) == PAGES or k == total:
+                        if len (pages) == PAGES or k == total_pages:
                             with futures.ThreadPoolExecutor (max_workers = PROCESSES) as pool:
                                 articles = [k for j in pool.map (download_page, pages) for k in j]
                                 articles = pool.map (download_article, articles)
@@ -318,8 +321,8 @@ def download_all (query: str, from_date: date, to_date: date, language: str, tra
                     # concurrent ~= 0.20 - 0.80 articles / sec
                     # sequential ~= 0.40 articles / sec
                     if downloads > 0:
-                        total = round (time.perf_counter () - start)
-                        time_print (f"{Fore.CYAN}Downloaded {downloads} articles in {total} sec, {round (downloads / total, 2)} articles / sec{Style.RESET_ALL}")
+                        total_time = round (time.perf_counter () - start)
+                        time_print (f"{Fore.CYAN}Downloaded {downloads} articles in {total_time} sec, {round (downloads / total_time, 2)} articles / sec{Style.RESET_ALL}")
 
                     k += 1
                     search = import_json (f"https://www.lrt.lt/api/search?page={k}&q={query}&count=44&dfrom={month [0].isoformat ()}&dto={month [1].isoformat ()}&{category}")
@@ -333,7 +336,7 @@ if __name__ == "__main__":
     parser.add_argument ("-c", "--concurrent", action = "store_true", default = SUPPRESS, help = "use concurrency (may be faster and more reliable)")
     parser.add_argument ("-v", "--verbose", action = "store_true")
     arguments = parser.parse_args ()
-    colorama.init ()
+    colorama.init (autoreset = True)
     language = arguments.language if "language" in arguments else input ("Choose a language (lit, eng, rus, pol, ukr): ")
 
     while language not in LANGUAGES:
